@@ -6,7 +6,7 @@ import {
 
 // ── State shape ───────────────────────────────────────────────────────────────
 
-interface AppState {
+export interface AppState {
   milestones: Milestone[];
   activeMilestoneId: string | null;
   logs: DailyLog[];
@@ -59,17 +59,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // Persist on every state change
+  // Persist on every state change — localStorage first, Supabase in background
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Lazy import to avoid circular dependency
+    import('@/lib/sync').then(({ syncToSupabase }) => {
+      syncToSupabase(state);
+    });
   }, [state]);
 
   // ── Pause expiry check (runs once on mount) ────────────────────────────────
-  // Problem: when a pause ends and the user never returns, getDashboardState
-  // stays in 'D' (paused) because there is no miss log for the day after the
-  // pause ended. Fix: on app load, for every expired pause, if the first
-  // expected check-in day (pausedUntil + 1) has no log and is <= yesterday,
-  // insert a miss so State B fires correctly on next open.
   useEffect(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     const yesterday = new Date();
@@ -81,21 +80,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let dirty = false;
 
       for (const pause of prev.pauses) {
-        // Skip pauses still active or in the future
         if (pause.pausedUntil >= todayStr) continue;
-
-        // First day user should have checked in after pause
         const resumeDate = new Date(pause.pausedUntil);
         resumeDate.setDate(resumeDate.getDate() + 1);
         const resumeDateStr = resumeDate.toISOString().split('T')[0];
-
-        // Resume day is today — let the user act themselves
         if (resumeDateStr > yesterdayStr) continue;
-
         const alreadyLogged = newLogs.some(
           l => l.milestoneId === pause.milestoneId && l.date === resumeDateStr
         );
-
         if (!alreadyLogged) {
           newLogs = [
             ...newLogs,
@@ -109,11 +101,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           dirty = true;
         }
       }
-
       return dirty ? { ...prev, logs: newLogs } : prev;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentionally runs once on mount
+  }, []);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -121,15 +112,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     m => m.id === state.activeMilestoneId
   ) ?? null;
 
-  const activeLogs = state.logs.filter(
-    l => l.milestoneId === state.activeMilestoneId
-  );
-  const activeCommitments = state.commitments.filter(
-    c => c.milestoneId === state.activeMilestoneId
-  );
-  const activePauses = state.pauses.filter(
-    p => p.milestoneId === state.activeMilestoneId
-  );
+  const activeLogs = state.logs.filter(l => l.milestoneId === state.activeMilestoneId);
+  const activeCommitments = state.commitments.filter(c => c.milestoneId === state.activeMilestoneId);
+  const activePauses = state.pauses.filter(p => p.milestoneId === state.activeMilestoneId);
 
   // ── Milestone actions ──────────────────────────────────────────────────────
 
@@ -145,9 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateMilestone = (id: string, updates: Partial<Milestone>) => {
     setState(prev => ({
       ...prev,
-      milestones: prev.milestones.map(m =>
-        m.id === id ? { ...m, ...updates } : m
-      ),
+      milestones: prev.milestones.map(m => m.id === id ? { ...m, ...updates } : m),
     }));
   };
 
@@ -159,26 +142,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => {
       const milestone = prev.milestones.find(m => m.id === id);
       if (!milestone) return prev;
-
       const completedAt = new Date().toISOString().split('T')[0];
-      const updatedMilestone: Milestone = {
-        ...milestone, status: 'completed', completedAt
-      };
-      const updatedMilestones = prev.milestones.map(m =>
-        m.id === id ? updatedMilestone : m
-      );
-
+      const updatedMilestone: Milestone = { ...milestone, status: 'completed', completedAt };
+      const updatedMilestones = prev.milestones.map(m => m.id === id ? updatedMilestone : m);
       const achievement = computeAchievements(updatedMilestone, prev.logs);
       const achievements = [
         ...prev.achievements.filter(a => a.milestoneId !== id),
         achievement,
       ];
-
-      const nextActive = updatedMilestones.find(
-        m => m.status === 'active' && m.id !== id
-      );
+      const nextActive = updatedMilestones.find(m => m.status === 'active' && m.id !== id);
       const activeMilestoneId = nextActive?.id ?? null;
-
       return { ...prev, milestones: updatedMilestones, achievements, activeMilestoneId };
     });
   };
@@ -189,9 +162,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const updatedMilestones = prev.milestones.map(m =>
         m.id === id ? { ...m, status: 'abandoned' as const, abandonedAt } : m
       );
-      const nextActive = updatedMilestones.find(
-        m => m.status === 'active' && m.id !== id
-      );
+      const nextActive = updatedMilestones.find(m => m.status === 'active' && m.id !== id);
       const activeMilestoneId = nextActive?.id ?? prev.activeMilestoneId;
       return { ...prev, milestones: updatedMilestones, activeMilestoneId };
     });
