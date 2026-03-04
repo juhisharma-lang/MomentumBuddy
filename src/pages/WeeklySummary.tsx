@@ -1,19 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, TrendingDown, Clock, BookOpen } from 'lucide-react';
+import { ArrowLeft, Clock } from 'lucide-react';
 import { startOfWeek, addDays, format, parseISO, differenceInDays } from 'date-fns';
+import PoweredByFooter from '@/components/PoweredByFooter';
 
 export default function WeeklySummary() {
   const navigate = useNavigate();
-  const { goal, logs } = useApp();
+  const { activeMilestone: goal, activeLogs: logs } = useApp();
 
-  if (!goal) {
-    navigate('/onboarding');
-    return null;
-  }
+  if (!goal) { navigate('/onboarding'); return null; }
 
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -26,10 +23,9 @@ export default function WeeklySummary() {
   const sessionsPlanned = Math.min(7, differenceInDays(today, weekStart) + 1);
   const sessionsCompleted = thisWeekLogs.filter(l => l.completed).length;
   const completionRate = sessionsPlanned > 0 ? Math.round((sessionsCompleted / sessionsPlanned) * 100) : 0;
-  const minutesLogged = sessionsCompleted * goal.dailyMinutes;
+  const minutesLogged = sessionsCompleted * (goal.dailyMinutes ?? 0);
 
-  // Avg restart delay
-  const missLogs = thisWeekLogs.filter(l => !l.completed);
+  const missLogs = logs.filter(l => !l.completed);
   let totalDelay = 0;
   let delayCount = 0;
   for (const miss of missLogs) {
@@ -39,74 +35,84 @@ export default function WeeklySummary() {
       delayCount++;
     }
   }
-  const avgDelay = delayCount > 0 ? (totalDelay / delayCount).toFixed(1) : '—';
+  const avgDelay = delayCount > 0 ? (totalDelay / delayCount).toFixed(1) : null;
 
-  // Insight
-  const getInsight = () => {
-    if (sessionsCompleted === sessionsPlanned && sessionsPlanned > 0) {
-      return "Perfect week! You showed up every single day. That's rare and powerful.";
-    }
-    if (completionRate >= 70) {
-      return "Strong week. You bounced back well from any misses — that's the real skill.";
-    }
-    if (completionRate >= 40) {
-      return "You stayed connected to your goal this week. Every session counts, even the short ones.";
-    }
-    if (sessionsCompleted > 0) {
-      return "You showed up at least once this week. That thread of connection matters more than you think.";
-    }
-    return "This week was tough, and that's okay. The fact that you're here reviewing it shows you haven't let go.";
+  const getInsight = (): string => {
+    if (sessionsCompleted === sessionsPlanned && sessionsPlanned > 0)
+      return `${sessionsCompleted}/${sessionsPlanned} sessions. Clean week.`;
+    if (completionRate >= 70)
+      return `${sessionsCompleted}/${sessionsPlanned} sessions. You recovered from any misses quickly — that is the pattern that compounds.`;
+    if (completionRate >= 40)
+      return `${sessionsCompleted}/${sessionsPlanned} sessions. Inconsistent week. Focus on reducing the gap between a miss and your next session.`;
+    if (sessionsCompleted > 0)
+      return `${sessionsCompleted}/${sessionsPlanned} sessions. Difficult week. How fast did you come back after each miss?`;
+    return `0/${sessionsPlanned} sessions this week. Reset starts now.`;
   };
 
   return (
-    <div className="min-h-screen bg-background px-6 py-8">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="mb-6 -ml-2">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
-      </Button>
+    <div className="relative bg-background flex flex-col min-h-[100dvh]">
+      <div className="flex-1 overflow-y-auto">
+      <div className="max-w-md mx-auto px-5 py-8">
 
-      <h1 className="text-2xl font-semibold mb-1">Weekly Summary</h1>
-      <p className="text-sm text-muted-foreground mb-8">
-        Week of {format(weekStart, 'MMMM d')}
-      </p>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" /> Dashboard
+        </button>
 
-      {/* Sessions Progress */}
-      <Card className="p-5 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium">Sessions completed</span>
-          <span className="text-sm text-muted-foreground">{sessionsCompleted}/{sessionsPlanned}</span>
-        </div>
-        <Progress value={completionRate} className="h-3 mb-2" />
-        <p className="text-xs text-muted-foreground">{completionRate}% completion rate</p>
-      </Card>
+        <h1 className="text-2xl font-semibold mb-1">Weekly Summary</h1>
+        <p className="text-[14px] text-foreground/70 mb-8">Week of {format(weekStart, 'MMMM d')}</p>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <TrendingDown className="w-4 h-4" />
-            <span className="text-xs">Avg restart delay</span>
-          </div>
-          <div className="text-2xl font-semibold font-serif">{avgDelay}<span className="text-sm font-normal text-muted-foreground ml-1">days</span></div>
+        {/* Avg restart delay */}
+        <Card className="p-5 mb-4">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.1em] font-light mb-2">Avg restart delay</p>
+          {avgDelay ? (
+            <>
+              <div className="flex items-baseline gap-1.5 mb-1">
+                <span className="text-4xl font-semibold">{avgDelay}</span>
+                <span className="text-foreground/50 text-sm">days</span>
+              </div>
+              <p className="text-xs text-foreground/60">Average days between a miss and your next completed session.</p>
+            </>
+          ) : (
+            <>
+              <span className="text-3xl font-semibold text-muted-foreground">—</span>
+              <p className="text-xs text-foreground/60 mt-1">No recoveries recorded yet — check back after your first miss and restart.</p>
+            </>
+          )}
         </Card>
-        <Card className="p-4">
+
+        {/* Sessions */}
+        <Card className="p-5 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium">Sessions completed</span>
+            <span className="text-sm text-foreground/60">{sessionsCompleted}/{sessionsPlanned}</span>
+          </div>
+          <Progress value={completionRate} className="h-2 mb-2" />
+          <p className="text-xs text-foreground/60">{completionRate}% this week</p>
+        </Card>
+
+        {/* Minutes */}
+        <Card className="p-4 mb-6">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <Clock className="w-4 h-4" />
             <span className="text-xs">Minutes logged</span>
           </div>
-          <div className="text-2xl font-semibold font-serif">{minutesLogged}<span className="text-sm font-normal text-muted-foreground ml-1">min</span></div>
-        </Card>
-      </div>
-
-      {/* Insight */}
-      <Card className="p-5 mb-6 border-primary/20 bg-primary/5">
-        <div className="flex items-start gap-3">
-          <BookOpen className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-medium mb-1">Weekly insight</p>
-            <p className="text-sm text-muted-foreground font-serif italic">{getInsight()}</p>
+          <div className="text-2xl font-semibold">
+            {minutesLogged}<span className="text-sm font-normal text-foreground/50 ml-1">min</span>
           </div>
-        </div>
-      </Card>
+        </Card>
+
+        {/* Insight */}
+        <Card className="p-5 border-border bg-muted/40">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.1em] font-light mb-2">This week</p>
+          <p className="text-sm text-foreground leading-relaxed">{getInsight()}</p>
+        </Card>
+
+        <PoweredByFooter />
+      </div>
+      </div>
     </div>
   );
 }

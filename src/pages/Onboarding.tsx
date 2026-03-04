@@ -1,328 +1,380 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useApp } from '@/contexts/AppContext';
-import { GoalType } from '@/types/app';
+import { GoalType, ChannelType } from '@/types/app';
 import { format } from 'date-fns';
-import { CalendarIcon, ArrowRight, ArrowLeft, Briefcase, Award, Lightbulb, Sparkles, Check } from 'lucide-react';
+import { CalendarIcon, Briefcase, Award, Lightbulb, Sparkles, Check, Send, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import PoweredByFooter from '@/components/PoweredByFooter';
 
 const GOAL_TYPES: { value: GoalType; label: string; icon: React.ReactNode; desc: string }[] = [
-  { value: 'job_switch', label: 'Job Switch', icon: <Briefcase className="w-6 h-6" />, desc: 'Preparing for a career move' },
-  { value: 'certification', label: 'Certification', icon: <Award className="w-6 h-6" />, desc: 'Studying for an exam' },
-  { value: 'skill_building', label: 'Skill Building', icon: <Lightbulb className="w-6 h-6" />, desc: 'Learning something new' },
-  { value: 'other', label: 'Other', icon: <Sparkles className="w-6 h-6" />, desc: 'Something else entirely' },
+  { value: 'job_switch',     label: 'Job Switch',    icon: <Briefcase className="w-5 h-5" />, desc: 'Preparing for a career move' },
+  { value: 'certification',  label: 'Certification', icon: <Award className="w-5 h-5" />,     desc: 'Studying for an exam' },
+  { value: 'skill_building', label: 'Skill Building',icon: <Lightbulb className="w-5 h-5" />, desc: 'Learning something new' },
+  { value: 'other',          label: 'Other',         icon: <Sparkles className="w-5 h-5" />,  desc: 'Something else entirely' },
 ];
 
-const MINUTE_OPTIONS = [15, 30, 45, 60, 90];
-
-const slideVariants = {
-  enter: { opacity: 0, x: 40 },
-  center: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -40 },
-};
+const MINUTE_OPTIONS = [30, 45, 60, 90];
+const TOTAL_FIELDS = 6;
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { setGoal, completeOnboarding } = useApp();
-  const [step, setStep] = useState(0);
+  const [searchParams] = useSearchParams();
+  const isAddingNew = searchParams.get('new') === '1';
+  const { addMilestone, setActiveMilestoneId, completeOnboarding } = useApp();
 
-  const [goalType, setGoalType] = useState<GoalType | null>(null);
-  const [goalTitle, setGoalTitle] = useState('');
-  const [deadlineType, setDeadlineType] = useState<'fixed' | 'flexible'>('flexible');
-  const [deadline, setDeadline] = useState<Date | undefined>();
-  const [dailyMinutes, setDailyMinutes] = useState(30);
-  const [startTime, setStartTime] = useState('09:00');
-  const [checkinTime, setCheckinTime] = useState('20:00');
-  const [email, setEmail] = useState('');
+  const [goalType, setGoalType]               = useState<GoalType | null>(null);
+  const [goalTitle, setGoalTitle]             = useState('');
+  const [deadlineType, setDeadlineType]       = useState<'fixed' | 'flexible' | null>(null);
+  const [deadline, setDeadline]               = useState<Date | undefined>();
+  const [dailyMinutes, setDailyMinutes]       = useState<number | null>(null);
+  const [startTime, setStartTime]             = useState('');
+  const [checkinTime, setCheckinTime]         = useState('');
+  const [channelType, setChannelType]         = useState<ChannelType | null>(null);
+  const [telegramHandle, setTelegramHandle]   = useState('');
+  const [email, setEmail]                     = useState('');
 
-  const totalSteps = 7;
+  const channelFilled =
+    channelType === 'telegram' ? telegramHandle.trim().length > 0
+    : channelType === 'email'  ? email.includes('@')
+    : false;
 
-  const canAdvance = () => {
-    switch (step) {
-      case 0: return !!goalType;
-      case 1: return goalTitle.trim().length > 0;
-      case 2: return deadlineType === 'flexible' || !!deadline;
-      case 3: return true;
-      case 4: return true;
-      case 5: return email.includes('@');
-      case 6: return true;
-      default: return false;
-    }
-  };
+  const filledCount = useMemo(() => {
+    let n = 0;
+    if (goalType) n++;
+    if (goalTitle.trim()) n++;
+    if (deadlineType === 'flexible' || (deadlineType === 'fixed' && deadline)) n++;
+    if (dailyMinutes !== null) n++;
+    if (startTime && checkinTime) n++;
+    if (channelFilled) n++;
+    return n;
+  }, [goalType, goalTitle, deadlineType, deadline, dailyMinutes, startTime, checkinTime, channelFilled]);
 
-  const handleNext = () => {
-    if (step < totalSteps - 1) setStep(s => s + 1);
-  };
+  const progressPct = Math.round((filledCount / TOTAL_FIELDS) * 100);
 
-  const handleBack = () => {
-    if (step > 0) setStep(s => s - 1);
-  };
+  const canSubmit =
+    !!goalType &&
+    goalTitle.trim().length > 0 &&
+    (deadlineType === 'flexible' || (deadlineType === 'fixed' && !!deadline)) &&
+    dailyMinutes !== null &&
+    startTime !== '' &&
+    checkinTime !== '' &&
+    channelFilled;
 
-  const handleConfirm = () => {
-    setGoal({
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    const newId = crypto.randomUUID();
+    addMilestone({
+      id: newId,
+      status: 'active',
+      createdAt: new Date().toISOString().split('T')[0],
+      activatedAt: new Date().toISOString().split('T')[0],
       goalType: goalType!,
       goalTitle,
-      deadlineType,
+      deadlineType: deadlineType as 'fixed' | 'flexible',
       deadline: deadline ? format(deadline, 'yyyy-MM-dd') : undefined,
-      dailyMinutes,
+      dailyMinutes: dailyMinutes!,
       startTime,
       checkinTime,
-      email,
+      channelType: channelType!,
+      telegramHandle: channelType === 'telegram' ? telegramHandle : undefined,
+      email: channelType === 'email' ? email : undefined,
     });
-    completeOnboarding();
+    if (isAddingNew) {
+      // Adding a second milestone from dashboard — switch to it and go back
+      setActiveMilestoneId(newId);
+    } else {
+      // First-time setup
+      completeOnboarding();
+    }
     navigate('/dashboard');
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Progress bar */}
-      <div className="px-6 pt-6 pb-2">
-        <div className="flex gap-1.5">
-          {Array.from({ length: totalSteps }).map((_, i) => (
+    <div className="relative bg-background flex flex-col min-h-[100dvh]">
+
+      {/* Sticky progress bar */}
+      <div className="sticky top-0 z-10 bg-background border-b border-border">
+        <div className="max-w-md mx-auto px-5 pt-5 pb-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground">
+              {isAddingNew ? 'Adding new milestone' : 'Setting up your plan'}
+            </p>
+            <p className="text-xs text-muted-foreground">{filledCount} / {TOTAL_FIELDS}</p>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
             <div
-              key={i}
-              className={cn(
-                "h-1.5 rounded-full flex-1 transition-all duration-300",
-                i <= step ? "bg-primary" : "bg-muted"
-              )}
+              className="h-full bg-primary rounded-full transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
             />
-          ))}
+          </div>
         </div>
       </div>
 
-      {/* Step content */}
-      <div className="flex-1 px-6 py-8 flex flex-col">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.25 }}
-            className="flex-1 flex flex-col"
-          >
-            {step === 0 && (
-              <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-semibold mb-2">What are you working toward?</h1>
-                <p className="text-muted-foreground mb-8">Pick the category that fits best.</p>
-                <div className="space-y-3">
-                  {GOAL_TYPES.map(gt => (
-                    <button
-                      key={gt.value}
-                      onClick={() => setGoalType(gt.value)}
-                      className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all",
-                        goalType === gt.value
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-card hover:border-primary/30"
-                      )}
-                    >
-                      <span className={cn(
-                        "p-2 rounded-lg",
-                        goalType === gt.value ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                      )}>
-                        {gt.icon}
-                      </span>
-                      <div>
-                        <div className="font-medium">{gt.label}</div>
-                        <div className="text-sm text-muted-foreground">{gt.desc}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Cards */}
+      <div className="flex-1 overflow-y-auto">
+      <div className="max-w-md mx-auto px-5 py-6 space-y-4 pb-32">
 
-            {step === 1 && (
-              <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-semibold mb-2">Name your goal</h1>
-                <p className="text-muted-foreground mb-8">Be specific — we'll use this throughout the app.</p>
-                <Input
-                  placeholder="e.g. AWS Solutions Architect exam"
-                  value={goalTitle}
-                  onChange={e => setGoalTitle(e.target.value)}
-                  className="text-lg py-6 bg-card"
-                  autoFocus
-                />
-                {goalTitle && (
-                  <p className="mt-4 text-sm text-muted-foreground italic font-serif">
-                    "I'm committed to <span className="text-foreground font-medium">{goalTitle}</span>"
-                  </p>
+        {/* 1 — Milestone type */}
+        <OnboardingCard number={1} label="What milestone are you preparing for?" filled={!!goalType}>
+          <div className="grid grid-cols-2 gap-2">
+            {GOAL_TYPES.map(gt => (
+              <button
+                key={gt.value}
+                onClick={() => setGoalType(gt.value)}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all",
+                  goalType === gt.value
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-background hover:border-primary/30"
                 )}
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-semibold mb-2">Do you have a deadline?</h1>
-                <p className="text-muted-foreground mb-8">No pressure — flexible works too.</p>
-                <div className="flex gap-3 mb-6">
-                  <button
-                    onClick={() => setDeadlineType('fixed')}
-                    className={cn(
-                      "flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all",
-                      deadlineType === 'fixed' ? "border-primary bg-primary/5" : "border-border bg-card"
-                    )}
-                  >
-                    Fixed date
-                  </button>
-                  <button
-                    onClick={() => setDeadlineType('flexible')}
-                    className={cn(
-                      "flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all",
-                      deadlineType === 'flexible' ? "border-primary bg-primary/5" : "border-border bg-card"
-                    )}
-                  >
-                    Flexible
-                  </button>
+              >
+                <span className={cn(
+                  "p-1.5 rounded-md shrink-0",
+                  goalType === gt.value ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                )}>
+                  {gt.icon}
+                </span>
+                <div>
+                  <div className="text-[14px] font-semibold text-foreground">{gt.label}</div>
+                  <div className="text-xs text-muted-foreground leading-tight">{gt.desc}</div>
                 </div>
-                {deadlineType === 'fixed' && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("w-full justify-start text-left py-6 bg-card", !deadline && "text-muted-foreground")}>
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {deadline ? format(deadline, 'PPP') : 'Pick your deadline'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={deadline}
-                        onSelect={setDeadline}
-                        disabled={d => d < new Date()}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
-            )}
+              </button>
+            ))}
+          </div>
+        </OnboardingCard>
 
-            {step === 3 && (
-              <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-semibold mb-2">Daily commitment</h1>
-                <p className="text-muted-foreground mb-8">How many minutes a day for <span className="text-foreground">{goalTitle || 'your goal'}</span>?</p>
-                <div className="grid grid-cols-3 gap-3">
-                  {MINUTE_OPTIONS.map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setDailyMinutes(m)}
-                      className={cn(
-                        "py-6 rounded-lg border-2 font-semibold text-xl transition-all",
-                        dailyMinutes === m
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border bg-card text-foreground hover:border-primary/30"
-                      )}
-                    >
-                      {m}<span className="text-sm font-normal text-muted-foreground ml-1">min</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* 2 — Goal name */}
+        <OnboardingCard number={2} label="Name your goal" filled={goalTitle.trim().length > 0}>
+          <Input
+            placeholder="e.g. Product Management Fundamentals"
+            value={goalTitle}
+            onChange={e => setGoalTitle(e.target.value)}
+            className="bg-background"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            Be specific — this appears in every check-in.
+          </p>
+        </OnboardingCard>
 
-            {step === 4 && (
-              <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-semibold mb-2">Your schedule</h1>
-                <p className="text-muted-foreground mb-8">When do you usually learn, and when should we check in?</p>
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Preferred learning time</label>
-                    <Input
-                      type="time"
-                      value={startTime}
-                      onChange={e => setStartTime(e.target.value)}
-                      className="py-6 bg-card text-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Evening check-in time</label>
-                    <Input
-                      type="time"
-                      value={checkinTime}
-                      onChange={e => setCheckinTime(e.target.value)}
-                      className="py-6 bg-card text-lg"
-                    />
-                    <p className="text-sm text-muted-foreground mt-2">We'll ask if you got your learning in.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 5 && (
-              <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-semibold mb-2">Stay in the loop</h1>
-                <p className="text-muted-foreground mb-8">We'll send gentle check-in reminders — nothing spammy.</p>
-                <Input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="py-6 bg-card text-lg"
-                  autoFocus
-                />
-              </div>
-            )}
-
-            {step === 6 && (
-              <div className="flex-1 flex flex-col">
-                <h1 className="text-2xl font-semibold mb-2">You're all set 🎯</h1>
-                <p className="text-muted-foreground mb-8">Here's your plan. Ready to start?</p>
-                <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-                  <SummaryRow label="Goal" value={goalTitle} />
-                  <SummaryRow label="Type" value={GOAL_TYPES.find(g => g.value === goalType)?.label || ''} />
-                  <SummaryRow
-                    label="Deadline"
-                    value={deadlineType === 'fixed' && deadline ? format(deadline, 'PPP') : 'Flexible'}
-                  />
-                  <SummaryRow label="Daily target" value={`${dailyMinutes} minutes`} />
-                  <SummaryRow label="Learning time" value={startTime} />
-                  <SummaryRow label="Check-in at" value={checkinTime} />
-                  <SummaryRow label="Email" value={email} />
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Navigation */}
-      <div className="px-6 pb-8 flex gap-3">
-        {step > 0 && (
-          <Button variant="ghost" size="lg" onClick={handleBack} className="px-6">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back
-          </Button>
-        )}
-        <Button
-          size="lg"
-          className="flex-1"
-          disabled={!canAdvance()}
-          onClick={step === totalSteps - 1 ? handleConfirm : handleNext}
-          variant={step === totalSteps - 1 ? 'success' : 'default'}
+        {/* 3 — Deadline */}
+        <OnboardingCard
+          number={3}
+          label="Do you have a deadline?"
+          filled={deadlineType === 'flexible' || (deadlineType === 'fixed' && !!deadline)}
         >
-          {step === totalSteps - 1 ? (
-            <>Let's go <Check className="w-4 h-4 ml-1" /></>
-          ) : (
-            <>Continue <ArrowRight className="w-4 h-4 ml-1" /></>
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setDeadlineType('fixed')}
+              className={cn(
+                "flex-1 py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                deadlineType === 'fixed' ? "border-primary bg-primary/5" : "border-border bg-background"
+              )}
+            >
+              Fixed date
+            </button>
+            <button
+              onClick={() => setDeadlineType('flexible')}
+              className={cn(
+                "flex-1 py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                deadlineType === 'flexible' ? "border-primary bg-primary/5" : "border-border bg-background"
+              )}
+            >
+              Flexible / none
+            </button>
+          </div>
+          {deadlineType === 'fixed' && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start bg-background", !deadline && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {deadline ? format(deadline, 'PPP') : 'Pick a date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={deadline}
+                  onSelect={setDeadline}
+                  disabled={d => d < new Date()}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           )}
-        </Button>
+          {deadlineType === 'flexible' && (
+            <p className="text-xs text-muted-foreground">
+              You can add a deadline later from settings.
+            </p>
+          )}
+        </OnboardingCard>
+
+        {/* 4 — Daily minutes */}
+        <OnboardingCard number={4} label="Daily commitment" filled={dailyMinutes !== null}>
+          <div className="grid grid-cols-4 gap-2">
+            {MINUTE_OPTIONS.map(m => (
+              <button
+                key={m}
+                onClick={() => setDailyMinutes(m)}
+                className={cn(
+                  "py-4 rounded-lg border-2 font-semibold text-lg transition-all",
+                  dailyMinutes === m
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border bg-background text-foreground hover:border-primary/30"
+                )}
+              >
+                {m}
+                <span className="block text-xs font-normal text-muted-foreground">min</span>
+              </button>
+            ))}
+          </div>
+        </OnboardingCard>
+
+        {/* 5 — Schedule */}
+        <OnboardingCard number={5} label="Your schedule" filled={startTime !== '' && checkinTime !== ''}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                Preferred learning time
+              </label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={e => setStartTime(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                Evening check-in time
+              </label>
+              <Input
+                type="time"
+                value={checkinTime}
+                onChange={e => setCheckinTime(e.target.value)}
+                className="bg-background"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                We'll message you to ask if you got your session in.
+              </p>
+            </div>
+          </div>
+        </OnboardingCard>
+
+        {/* 6 — Channel */}
+        <OnboardingCard number={6} label="Where should we check in?" filled={channelFilled}>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setChannelType('telegram')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                channelType === 'telegram' ? "border-primary bg-primary/5" : "border-border bg-background"
+              )}
+            >
+              <Send className="w-3.5 h-3.5" />
+              Telegram
+              {channelType !== 'telegram' && (
+                <span className="text-xs text-muted-foreground">· Recommended</span>
+              )}
+            </button>
+            <button
+              onClick={() => setChannelType('email')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition-all",
+                channelType === 'email' ? "border-primary bg-primary/5" : "border-border bg-background"
+              )}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              Email
+            </button>
+          </div>
+
+          {channelType === 'telegram' && (
+            <div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                <Input
+                  placeholder="username"
+                  value={telegramHandle}
+                  onChange={e => setTelegramHandle(e.target.value.replace('@', ''))}
+                  className="bg-background pl-7"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                First start a chat with{' '}
+                <span className="font-medium text-foreground">@MomentumBuddyBot</span>{' '}
+                on Telegram, then enter your username above.
+              </p>
+            </div>
+          )}
+
+          {channelType === 'email' && (
+            <div>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="bg-background"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Sent from hello@momentumbuddy.app. No marketing emails.
+              </p>
+            </div>
+          )}
+        </OnboardingCard>
+
       </div>
+      </div>
+
+      {/* Fixed CTA */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 pb-6 pt-8 bg-gradient-to-t from-background via-background/95 to-transparent">
+        <div className="max-w-md mx-auto">
+          <Button size="lg" className="w-full h-14 rounded-2xl text-[15px] font-semibold" disabled={!canSubmit} onClick={handleSubmit}>
+            Begin <Check className="w-4 h-4 ml-1" />
+          </Button>
+          <PoweredByFooter />
+        </div>
+      </div>
+
     </div>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function OnboardingCard({
+  number,
+  label,
+  filled,
+  children,
+}: {
+  number: number;
+  label: string;
+  filled: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
+    <div className={cn(
+      "rounded-xl border-2 p-5 transition-all duration-200",
+      filled ? "border-primary/30 bg-card" : "border-border bg-card"
+    )}>
+      <div className="flex items-center gap-3 mb-4">
+        <span className={cn(
+          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-all",
+          filled ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+        )}>
+          {filled ? <Check className="w-3 h-3" /> : number}
+        </span>
+        <p className="text-[15px] font-semibold text-foreground" style={{fontFamily:"'Playfair Display',serif"}}>{label}</p>
+      </div>
+      {children}
     </div>
   );
 }

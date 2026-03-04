@@ -3,24 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useApp } from '@/contexts/AppContext';
-import { FallbackPath, FlowType } from '@/types/app';
 import { cn } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
-import { CalendarIcon, Check, Heart, Zap, ArrowRight, Pause, CalendarDays } from 'lucide-react';
+import { Check, ArrowRight, RotateCcw } from 'lucide-react';
+import { queueDailySessionNudges, queueCommitmentNudges } from '@/lib/nudgeQueue';
+import PoweredByFooter from '@/components/PoweredByFooter';
 
 type CheckInState =
   | 'question'
-  | 'celebration'
-  | 'reassurance'
+  | 'logged'
+  | 'reset'
   | 'path_select'
-  | 'lock_in'
-  | 'confirmation'
-  | 'reschedule'
-  | 'pause_select'
-  | 'pause_confirm';
+  | 'confirmation';
+
+const MINUTE_OPTIONS = [30, 45, 60, 90];
 
 const slideVariants = {
   enter: { opacity: 0, x: 40 },
@@ -28,20 +25,12 @@ const slideVariants = {
   exit: { opacity: 0, x: -40 },
 };
 
-const PAUSE_OPTIONS = [
-  { label: '2 days', days: 2 },
-  { label: '3 days', days: 3 },
-  { label: 'Rest of week', days: 0 },
-];
-
 export default function CheckIn() {
   const navigate = useNavigate();
-  const { goal, addLog, addCommitment, addPause } = useApp();
+  const { activeMilestone: goal, activeLogs: logs, addLog, addCommitment } = useApp();
   const [state, setState] = useState<CheckInState>('question');
-  const [selectedPath, setSelectedPath] = useState<FallbackPath>('quick_win');
+  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
   const [commitTime, setCommitTime] = useState(goal?.startTime || '09:00');
-  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
-  const [pauseDays, setPauseDays] = useState(2);
 
   if (!goal) {
     navigate('/onboarding');
@@ -52,60 +41,55 @@ export default function CheckIn() {
   const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
   const tomorrowFormatted = format(addDays(new Date(), 1), 'EEEE, MMMM d');
 
-  const pathMinutes: Record<FallbackPath, number> = {
-    quick_win: Math.round(goal.dailyMinutes * 0.5),
-    back_on_track: goal.dailyMinutes,
-    make_up: Math.round(goal.dailyMinutes * 1.5),
-  };
+  // Avg restart delay for display on logged screen
+  const missLogs = logs.filter(l => !l.completed);
+  let totalRecovery = 0;
+  let recoveryCount = 0;
+  for (const miss of missLogs) {
+    const nextComplete = logs.find(l => l.completed && l.date > miss.date);
+    if (nextComplete) {
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const delay = (new Date(nextComplete.date).getTime() - new Date(miss.date).getTime()) / msPerDay;
+      totalRecovery += delay;
+      recoveryCount++;
+    }
+  }
+  const avgRecovery = recoveryCount > 0 ? (totalRecovery / recoveryCount).toFixed(1) : null;
 
   const handleYes = () => {
     addLog({ date: today, completed: true, fallbackTriggered: false });
-    setState('celebration');
+    // Queue 30-min + start-time reminders for tomorrow's session
+    queueDailySessionNudges(goal, tomorrow);
+    setState('logged');
   };
 
   const handleNo = () => {
     addLog({ date: today, completed: false, fallbackTriggered: true });
-    setState('reassurance');
+    setState('reset');
   };
 
   const handleLockIn = () => {
-    const commitDate = state === 'reschedule' && rescheduleDate
-      ? format(rescheduleDate, 'yyyy-MM-dd')
-      : tomorrow;
+    if (!selectedMinutes) return;
     addCommitment({
       id: crypto.randomUUID(),
-      committedForDate: commitDate,
+      committedForDate: tomorrow,
       committedTime: commitTime,
-      minutes: pathMinutes[selectedPath],
-      flowType: state === 'reschedule' ? 'reschedule' : 'lockin',
+      minutes: selectedMinutes,
+      flowType: 'lockin',
       confirmed: true,
       fulfilled: false,
     });
+    // Queue 30-min reminder before committed restart time
+    queueCommitmentNudges(goal, tomorrow, commitTime, selectedMinutes);
     setState('confirmation');
   };
 
-  const handlePause = () => {
-    const pauseUntil = format(addDays(new Date(), pauseDays), 'yyyy-MM-dd');
-    addPause({ pausedFrom: today, pausedUntil: pauseUntil });
-    addCommitment({
-      id: crypto.randomUUID(),
-      committedForDate: pauseUntil,
-      committedTime: commitTime,
-      minutes: pathMinutes[selectedPath],
-      flowType: 'pause',
-      confirmed: true,
-      fulfilled: false,
-    });
-    setState('pause_confirm');
-  };
-
-  const commitDateLabel = () => {
-    if (state === 'reschedule' && rescheduleDate) return format(rescheduleDate, 'EEEE, MMMM d');
-    return tomorrowFormatted;
-  };
+  const canLockIn = selectedMinutes !== null && commitTime !== '';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6 py-8">
+    <div className="relative bg-background flex flex-col min-h-[100dvh]">
+      <div className="flex-1 overflow-y-auto">
+      <div className="max-w-md mx-auto px-5 py-10 min-h-[100dvh] flex flex-col">
       <AnimatePresence mode="wait">
         <motion.div
           key={state}
@@ -116,18 +100,19 @@ export default function CheckIn() {
           transition={{ duration: 0.25 }}
           className="flex-1 flex flex-col"
         >
+
+          {/* ── Question ── */}
           {state === 'question' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                <Heart className="w-8 h-8 text-primary" />
-              </div>
-              <h1 className="text-2xl font-semibold mb-3">Evening check-in</h1>
-              <p className="text-muted-foreground mb-10">
-                Did you get to your <span className="text-foreground font-medium">{goal.goalTitle}</span> learning block today?
+              <h1 className="text-2xl font-semibold mb-3">Check-in</h1>
+              <p className="text-[14px] text-foreground/65 leading-relaxed mb-10">
+                Did you get to your{' '}
+                <span className="text-foreground font-medium">{goal.goalTitle}</span>{' '}
+                learning block today?
               </p>
               <div className="w-full space-y-3">
                 <Button size="lg" className="w-full" variant="success" onClick={handleYes}>
-                  Yes, I did! <Check className="w-4 h-4 ml-1" />
+                  Yes <Check className="w-4 h-4 ml-1" />
                 </Button>
                 <Button size="lg" className="w-full" variant="outline" onClick={handleNo}>
                   Not today
@@ -136,213 +121,125 @@ export default function CheckIn() {
             </div>
           )}
 
-          {state === 'celebration' && (
+          {/* ── Logged (Yes flow) ── */}
+          {state === 'logged' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="text-5xl mb-6">🎉</div>
-              <h1 className="text-2xl font-semibold mb-3">Amazing work!</h1>
-              <p className="text-muted-foreground mb-10">
-                You showed up for <span className="text-foreground font-medium">{goal.goalTitle}</span> today. That's what momentum looks like.
-              </p>
-              <Button size="lg" className="w-full" onClick={() => navigate('/dashboard')}>
-                Back to Dashboard
+              <div className="w-14 h-14 rounded-full bg-success/10 flex items-center justify-center mb-6">
+                <Check className="w-7 h-7 text-success" />
+              </div>
+              <h1 className="text-2xl font-semibold mb-2">Session logged.</h1>
+              <p className="text-[14px] text-foreground/65 mb-8">See you tomorrow.</p>
+              {avgRecovery && (
+                <div className="bg-card border border-border rounded-xl p-4 mb-8 w-full">
+                  <p className="text-xs text-muted-foreground mb-1">Avg restart delay</p>
+                  <p className="text-2xl font-semibold">
+                    {avgRecovery}{' '}
+                    <span className="text-[13px] text-foreground/50">days</span>
+                  </p>
+                </div>
+              )}
+              <Button size="lg" className="w-full" variant="outline" onClick={() => navigate('/dashboard')}>
+                Dashboard
               </Button>
             </div>
           )}
 
-          {state === 'reassurance' && (
+          {/* ── Reset (No flow) ── */}
+          {state === 'reset' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="text-5xl mb-6">💛</div>
-              <h1 className="text-2xl font-semibold mb-3">That's completely okay</h1>
-              <p className="text-muted-foreground mb-3">
-                Missing a day doesn't erase your progress. What matters is how quickly you come back.
-              </p>
-              <p className="text-sm text-muted-foreground mb-10">
-                Let's set up a small comeback plan for tomorrow.
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-6">
+                <RotateCcw className="w-7 h-7 text-muted-foreground" />
+              </div>
+              <h1 className="text-2xl font-semibold mb-2">Let&apos;s reset.</h1>
+              <p className="text-[14px] text-foreground/65 leading-relaxed mb-10">
+                What matters is how quickly you come back.
               </p>
               <Button size="lg" className="w-full" onClick={() => setState('path_select')}>
-                Let's do it <ArrowRight className="w-4 h-4 ml-1" />
+                Plan tomorrow <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           )}
 
+          {/* ── Path select — minutes + time, no Steady/Full push ── */}
           {state === 'path_select' && (
             <div className="flex-1 flex flex-col">
-              <h1 className="text-2xl font-semibold mb-2">Choose your comeback</h1>
-              <p className="text-muted-foreground mb-8">Any option is a win. The default is easiest.</p>
-              <div className="space-y-3 mb-8">
-                {([
-                  { path: 'quick_win' as FallbackPath, label: 'Quick win', desc: 'Half session — just get started', icon: <Zap className="w-5 h-5" />, default: true },
-                  { path: 'back_on_track' as FallbackPath, label: 'Back on track', desc: 'Full session — business as usual', icon: <ArrowRight className="w-5 h-5" /> },
-                  { path: 'make_up' as FallbackPath, label: 'Make up session', desc: 'Extended session — extra momentum', icon: <Zap className="w-5 h-5" /> },
-                ]).map(option => (
+              <h1 className="text-2xl font-semibold mb-2">Plan tomorrow&apos;s session</h1>
+              <p className="text-[14px] text-foreground/65 leading-relaxed mb-8">
+                Pick what you can commit to for{' '}
+                <span className="text-foreground font-medium">{tomorrowFormatted}</span>.
+              </p>
+
+              {/* Minute pills */}
+              <p className="text-sm font-medium mb-3">How long?</p>
+              <div className="grid grid-cols-4 gap-2 mb-8">
+                {MINUTE_OPTIONS.map(m => (
                   <button
-                    key={option.path}
-                    onClick={() => setSelectedPath(option.path)}
+                    key={m}
+                    onClick={() => setSelectedMinutes(m)}
                     className={cn(
-                      "w-full flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all",
-                      selectedPath === option.path
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-card hover:border-primary/30"
+                      "py-4 rounded-lg border-2 font-semibold text-lg transition-all",
+                      selectedMinutes === m
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border bg-card text-foreground hover:border-primary/30"
                     )}
                   >
-                    <span className={cn(
-                      "p-2 rounded-lg",
-                      selectedPath === option.path ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                    )}>
-                      {option.icon}
-                    </span>
-                    <div className="flex-1">
-                      <div className="font-medium flex items-center gap-2">
-                        {option.label}
-                        <span className="text-sm text-muted-foreground">({pathMinutes[option.path]} min)</span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">{option.desc}</div>
-                    </div>
-                    {option.default && selectedPath === option.path && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">default</span>
-                    )}
+                    {m}
+                    <span className="block text-xs font-normal text-muted-foreground">min</span>
                   </button>
                 ))}
               </div>
-              <Button size="lg" className="w-full mb-3" onClick={() => setState('lock_in')}>
+
+              {/* Time picker */}
+              <p className="text-sm font-medium mb-3">What time?</p>
+              <Input
+                type="time"
+                value={commitTime}
+                onChange={e => setCommitTime(e.target.value)}
+                className="py-6 bg-card text-lg mb-3"
+              />
+              <p className="text-xs text-muted-foreground mb-8">
+                Defaults to your usual learning time. Change it if tomorrow is different.
+              </p>
+
+              {/* If-then sentence — appears once both are selected */}
+              {selectedMinutes && commitTime && (
+                <div className="bg-card border border-border rounded-xl p-5 mb-8">
+                  <p className="font-medium font-serif text-base leading-relaxed">
+                    "If it is{' '}
+                    <span className="text-primary">{commitTime}</span>{' '}
+                    on{' '}
+                    <span className="text-primary">{tomorrowFormatted}</span>, I will spend{' '}
+                    <span className="text-primary">{selectedMinutes} minutes</span>{' '}
+                    on{' '}
+                    <span className="text-primary">{goal.goalTitle}</span>."
+                  </p>
+                </div>
+              )}
+
+              <Button
+                size="lg"
+                className="w-full"
+                disabled={!canLockIn}
+                onClick={handleLockIn}
+              >
                 Lock it in <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" className="flex-1" onClick={() => setState('reschedule')}>
-                  <CalendarDays className="w-4 h-4 mr-1" /> Reschedule
-                </Button>
-                <Button variant="ghost" size="sm" className="flex-1" onClick={() => setState('pause_select')}>
-                  <Pause className="w-4 h-4 mr-1" /> Pause check-ins
-                </Button>
-              </div>
             </div>
           )}
 
-          {state === 'lock_in' && (
-            <div className="flex-1 flex flex-col">
-              <h1 className="text-2xl font-semibold mb-2">Lock in your plan</h1>
-              <p className="text-muted-foreground mb-8">When will you do it tomorrow?</p>
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Start time</label>
-                <Input
-                  type="time"
-                  value={commitTime}
-                  onChange={e => setCommitTime(e.target.value)}
-                  className="py-6 bg-card text-lg"
-                />
-              </div>
-              <div className="bg-card border border-border rounded-xl p-5 mb-8">
-                <p className="text-sm text-muted-foreground mb-1 italic font-serif">Your implementation intention:</p>
-                <p className="font-medium font-serif text-lg">
-                  "If it is <span className="text-primary">{commitTime}</span> on{' '}
-                  <span className="text-primary">{tomorrowFormatted}</span>, I will spend{' '}
-                  <span className="text-primary">{pathMinutes[selectedPath]} minutes</span> on{' '}
-                  <span className="text-primary">{goal.goalTitle}</span>."
-                </p>
-              </div>
-              <Button size="lg" className="w-full" variant="success" onClick={handleLockIn}>
-                I commit <Check className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          )}
-
-          {state === 'reschedule' && (
-            <div className="flex-1 flex flex-col">
-              <h1 className="text-2xl font-semibold mb-2">Reschedule</h1>
-              <p className="text-muted-foreground mb-6">Pick a date that works. We'll pause check-ins until then.</p>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start py-6 bg-card mb-6", !rescheduleDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {rescheduleDate ? format(rescheduleDate, 'PPP') : 'Pick a date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={rescheduleDate}
-                    onSelect={setRescheduleDate}
-                    disabled={d => d <= new Date()}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              {rescheduleDate && (
-                <>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium mb-2">Start time</label>
-                    <Input
-                      type="time"
-                      value={commitTime}
-                      onChange={e => setCommitTime(e.target.value)}
-                      className="py-6 bg-card text-lg"
-                    />
-                  </div>
-                  <div className="bg-card border border-border rounded-xl p-5 mb-6">
-                    <p className="font-medium font-serif">
-                      "On <span className="text-primary">{format(rescheduleDate, 'EEEE, MMMM d')}</span> at{' '}
-                      <span className="text-primary">{commitTime}</span>, I will spend{' '}
-                      <span className="text-primary">{pathMinutes[selectedPath]} minutes</span> on{' '}
-                      <span className="text-primary">{goal.goalTitle}</span>."
-                    </p>
-                  </div>
-                  <Button size="lg" className="w-full" variant="success" onClick={handleLockIn}>
-                    Confirm <Check className="w-4 h-4 ml-1" />
-                  </Button>
-                </>
-              )}
-              <Button variant="ghost" size="sm" className="mt-3" onClick={() => setState('path_select')}>
-                ← Back to options
-              </Button>
-            </div>
-          )}
-
-          {state === 'pause_select' && (
-            <div className="flex-1 flex flex-col">
-              <h1 className="text-2xl font-semibold mb-2">Take a breather</h1>
-              <p className="text-muted-foreground mb-8">We'll pause check-ins and come back when you're ready.</p>
-              <div className="space-y-3 mb-8">
-                {PAUSE_OPTIONS.map(opt => {
-                  const days = opt.days === 0
-                    ? Math.max(1, 7 - new Date().getDay())
-                    : opt.days;
-                  const resumeDate = format(addDays(new Date(), days), 'EEEE, MMMM d');
-                  return (
-                    <button
-                      key={opt.label}
-                      onClick={() => setPauseDays(days)}
-                      className={cn(
-                        "w-full p-4 rounded-lg border-2 text-left transition-all",
-                        pauseDays === days
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-card hover:border-primary/30"
-                      )}
-                    >
-                      <div className="font-medium">{opt.label}</div>
-                      <div className="text-sm text-muted-foreground">Resume on {resumeDate}</div>
-                    </button>
-                  );
-                })}
-              </div>
-              <Button size="lg" className="w-full" onClick={handlePause}>
-                Pause check-ins
-              </Button>
-              <Button variant="ghost" size="sm" className="mt-3" onClick={() => setState('path_select')}>
-                ← Back to options
-              </Button>
-            </div>
-          )}
-
+          {/* ── Confirmation ── */}
           {state === 'confirmation' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="text-5xl mb-6">✅</div>
-              <h1 className="text-2xl font-semibold mb-3">You're locked in</h1>
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                <Check className="w-7 h-7 text-primary" />
+              </div>
+              <h1 className="text-2xl font-semibold mb-2">You&apos;re locked in.</h1>
+              <p className="text-[14px] text-foreground/65 mb-8">We&apos;ll check in tomorrow evening.</p>
               <div className="bg-card border border-border rounded-xl p-5 mb-8 w-full text-left">
-                <div className="space-y-2 text-sm">
+                <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Date</span>
-                    <span className="font-medium">{commitDateLabel()}</span>
+                    <span className="font-medium">{tomorrowFormatted}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Time</span>
@@ -350,7 +247,7 @@ export default function CheckIn() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Duration</span>
-                    <span className="font-medium">{pathMinutes[selectedPath]} minutes</span>
+                    <span className="font-medium">{selectedMinutes} minutes</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Goal</span>
@@ -358,27 +255,17 @@ export default function CheckIn() {
                   </div>
                 </div>
               </div>
-              <Button size="lg" className="w-full" onClick={() => navigate('/dashboard')}>
-                Back to Dashboard
+              <Button size="lg" className="w-full" variant="outline" onClick={() => navigate('/dashboard')}>
+                Dashboard
               </Button>
             </div>
           )}
 
-          {state === 'pause_confirm' && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="text-5xl mb-6">🌿</div>
-              <h1 className="text-2xl font-semibold mb-3">Check-ins paused</h1>
-              <p className="text-muted-foreground mb-8">
-                We'll check in again on <span className="text-foreground font-medium">{format(addDays(new Date(), pauseDays), 'EEEE, MMMM d')}</span>.
-                Take care of yourself.
-              </p>
-              <Button size="lg" className="w-full" onClick={() => navigate('/dashboard')}>
-                Back to Dashboard
-              </Button>
-            </div>
-          )}
         </motion.div>
       </AnimatePresence>
+      <PoweredByFooter />
+      </div>
+      </div>
     </div>
   );
 }

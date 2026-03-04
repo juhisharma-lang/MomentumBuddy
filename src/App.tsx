@@ -9,6 +9,8 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import CheckIn from "./pages/CheckIn";
 import WeeklySummary from "./pages/WeeklySummary";
+import Settings from "./pages/Settings";
+import MilestoneComplete from "./pages/MilestoneComplete";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/checkin" element={<CheckIn />} />
             <Route path="/weekly" element={<WeeklySummary />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/complete" element={<MilestoneComplete />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

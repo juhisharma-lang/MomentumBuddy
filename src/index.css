@@ -1,121 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+
+/* ─────────────────────────────────────────────────────
+   Momentum Buddy — Warm Linen theme
+
+   Typography:
+     POP  → Playfair Display 700/900 + DM Sans 600
+     MUTE → DM Sans 300 + color: text-muted
+
+   Palette:
+     bg         #FAF8F4  warm off-white linen
+     surface    #F0EDE6  cards
+     border     #E2DDD5  warm grey borders
+     muted      #B5AFA6  secondary text
+     text       #3A322A  warm near-black
+     terra      #C47A5A  primary — encouraging terracotta
+     terra/lt   #EDD8CC  tints, selected states
+     terra/dk   #9A4A30  hover / pressed
+     success    #5E8C70  natural green
+     success/20 #C8DDD0  green tint
+─────────────────────────────────────────────────────── */
+
+
 @layer base {
   :root {
-    --background: 36 33% 96%;
-    --foreground: 25 30% 12%;
-
-    --card: 36 30% 99%;
-    --card-foreground: 25 30% 12%;
-
-    --popover: 36 30% 99%;
-    --popover-foreground: 25 30% 12%;
-
-    --primary: 24 75% 50%;
-    --primary-foreground: 40 30% 98%;
-
-    --secondary: 36 20% 91%;
-    --secondary-foreground: 25 25% 20%;
-
-    --muted: 36 18% 93%;
-    --muted-foreground: 25 12% 48%;
-
-    --accent: 36 25% 93%;
-    --accent-foreground: 25 25% 12%;
-
-    --destructive: 0 65% 55%;
+    --background:          30 18% 97%;
+    --card:                30 20% 95%;
+    --card-foreground:     25 16% 20%;
+    --popover:             30 18% 97%;
+    --popover-foreground:  25 16% 20%;
+    --primary:             18 45% 56%;
+    --primary-foreground:  0 0% 100%;
+    --secondary:           30 15% 92%;
+    --secondary-foreground:25 16% 20%;
+    --muted:               30 15% 92%;
+    --muted-foreground:    25 10% 67%;
+    --accent:              18 45% 87%;
+    --accent-foreground:   18 50% 38%;
+    --destructive:         0 47% 56%;
     --destructive-foreground: 0 0% 100%;
-
-    --success: 152 35% 42%;
-    --success-foreground: 0 0% 100%;
-
-    --miss: 0 55% 65%;
-    --miss-foreground: 0 0% 100%;
-
-    --border: 36 18% 87%;
-    --input: 36 18% 87%;
-    --ring: 24 75% 50%;
-
-    --radius: 1rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border:              25 18% 86%;
+    --input:               25 18% 86%;
+    --ring:                18 45% 56%;
+    --radius:              0.75rem;
+    --chart-1: 18 45% 56%;
+    --chart-2: 148 22% 46%;
+    --chart-3: 25 10% 67%;
+    --chart-4: 0 47% 56%;
+    --chart-5: 200 30% 50%;
   }
 
   .dark {
-    --background: 25 20% 8%;
-    --foreground: 36 30% 92%;
-
-    --card: 25 18% 12%;
-    --card-foreground: 36 30% 92%;
-
-    --popover: 25 18% 12%;
-    --popover-foreground: 36 30% 92%;
-
-    --primary: 24 75% 55%;
-    --primary-foreground: 40 30% 98%;
-
-    --secondary: 25 15% 18%;
-    --secondary-foreground: 36 20% 85%;
-
-    --muted: 25 12% 16%;
-    --muted-foreground: 36 10% 55%;
-
-    --accent: 25 15% 18%;
-    --accent-foreground: 36 20% 85%;
-
-    --destructive: 0 62.8% 30.6%;
+    --background:          25 10% 13%;
+    --card:                25 10% 16%;
+    --card-foreground:     30 15% 88%;
+    --popover:             25 10% 13%;
+    --popover-foreground:  30 15% 88%;
+    --primary:             18 50% 62%;
+    --primary-foreground:  25 10% 10%;
+    --secondary:           25 10% 20%;
+    --secondary-foreground:30 15% 88%;
+    --muted:               25 10% 20%;
+    --muted-foreground:    25 8% 55%;
+    --accent:              18 35% 28%;
+    --accent-foreground:   18 50% 72%;
+    --destructive:         0 47% 48%;
     --destructive-foreground: 0 0% 100%;
-
-    --success: 152 35% 38%;
-    --success-foreground: 0 0% 100%;
-
-    --miss: 0 50% 45%;
-    --miss-foreground: 0 0% 100%;
-
-    --border: 25 12% 20%;
-    --input: 25 12% 20%;
-    --ring: 24 75% 55%;
-
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border:              25 10% 24%;
+    --input:               25 10% 24%;
+    --ring:                18 50% 62%;
+    --chart-1: 18 50% 62%;
+    --chart-2: 148 28% 52%;
+    --chart-3: 25 8% 44%;
+    --chart-4: 0 47% 48%;
+    --chart-5: 200 35% 55%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Lora', Georgia, serif;
+  h1, h2, h3 {
+    font-family: 'Playfair Display', serif;
+    letter-spacing: -0.02em;
   }
 }
 
 @layer utilities {
-  .font-serif {
-    font-family: 'Lora', Georgia, serif;
+  /* POP */
+  .font-display       { font-family: 'Playfair Display', serif; font-weight: 700; letter-spacing: -0.02em; }
+  .font-display-heavy { font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: -0.03em; }
+
+  /* MUTE */
+  .font-muted-label {
+    font-family: 'DM Sans', sans-serif; font-weight: 300;
+    font-size: 0.625rem; letter-spacing: 0.05em;
+    text-transform: uppercase; color: hsl(var(--muted-foreground));
   }
-  .font-sans {
-    font-family: 'DM Sans', system-ui, sans-serif;
-  }
+  .font-helper { font-family: 'DM Sans', sans-serif; font-weight: 300; color: hsl(var(--muted-foreground)); }
+
+  /* Success */
+  .text-success           { color: #5E8C70; }
+  .bg-success             { background-color: #5E8C70; }
+  .bg-success\/20         { background-color: #C8DDD0; }
+  .text-success-foreground{ color: #fff; }
+  .border-success         { border-color: #5E8C70; }
+
+  /* Terracotta */
+  .text-terra    { color: #C47A5A; }
+  .bg-terra      { background-color: #C47A5A; }
+  .bg-terra\/15  { background-color: #EDD8CC; }
 }
