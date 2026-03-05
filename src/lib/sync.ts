@@ -16,7 +16,7 @@ async function doSync(state: any) {
       .from('users')
       .select('id')
       .eq('device_id', deviceId)
-      .single()
+      .maybeSingle()
 
     let userId: string
 
