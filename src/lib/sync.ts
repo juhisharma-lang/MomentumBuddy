@@ -1,27 +1,14 @@
 import { supabase } from './supabase'
 import { getDeviceId } from './deviceId'
-import { AppState } from '@/contexts/AppContext'
-
-
-export interface AppState {
-  milestones: any[];
-  activeMilestoneId: string | null;
-  logs: any[];
-  commitments: any[];
-  pauses: any[];
-  achievements: any[];
-  feedback: any[];
-  onboarded: boolean;
-}
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null
 
-export function syncToSupabase(state: AppState) {
+export function syncToSupabase(state: any) {
   if (syncTimer) clearTimeout(syncTimer)
   syncTimer = setTimeout(() => doSync(state), 2000)
 }
 
-async function doSync(state: AppState) {
+async function doSync(state: any) {
   try {
     const deviceId = getDeviceId()
 
