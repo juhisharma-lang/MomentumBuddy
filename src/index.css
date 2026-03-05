@@ -1,83 +1,55 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
 
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
 /* ─────────────────────────────────────────────────────
-   Momentum Buddy — Warm Linen theme
+   Momentum Buddy — Watermelon Splash theme
 
    Typography:
      POP  → Playfair Display 700/900 + DM Sans 600
      MUTE → DM Sans 300 + color: text-muted
 
    Palette:
-     bg         #FAF8F4  warm off-white linen
-     surface    #F0EDE6  cards
-     border     #E2DDD5  warm grey borders
-     muted      #B5AFA6  secondary text
-     text       #3A322A  warm near-black
-     terra      #C47A5A  primary — encouraging terracotta
-     terra/lt   #EDD8CC  tints, selected states
-     terra/dk   #9A4A30  hover / pressed
-     success    #5E8C70  natural green
-     success/20 #C8DDD0  green tint
+     bg         #0D1F1A  deep watermelon rind green
+     surface    #132820  card surface
+     surface2   #1A3328  elevated card
+     border     #1F3D2F  subtle border
+     text       #F5EDE8  warm cream
+     muted      #8FA898  sage grey
+     terra      #E8705A  watermelon flesh — primary
+     terra/lt   #3D2420  terra tint bg
+     green      #5EC47A  seed green — success
+     green/lt   #1A3D28  green tint bg
 ─────────────────────────────────────────────────────── */
-
 
 @layer base {
   :root {
-    --background:          30 18% 97%;
-    --card:                30 20% 95%;
-    --card-foreground:     25 16% 20%;
-    --popover:             30 18% 97%;
-    --popover-foreground:  25 16% 20%;
-    --primary:             18 45% 56%;
-    --primary-foreground:  0 0% 100%;
-    --secondary:           30 15% 92%;
-    --secondary-foreground:25 16% 20%;
-    --muted:               30 15% 92%;
-    --muted-foreground:    25 10% 67%;
-    --accent:              18 45% 87%;
-    --accent-foreground:   18 50% 38%;
-    --destructive:         0 47% 56%;
+    --background:           160 38% 9%;
+    --foreground:           20 40% 95%;
+    --card:                 160 35% 11%;
+    --card-foreground:      20 40% 95%;
+    --popover:              160 38% 9%;
+    --popover-foreground:   20 40% 95%;
+    --primary:              12 75% 63%;
+    --primary-foreground:   0 0% 100%;
+    --secondary:            160 30% 15%;
+    --secondary-foreground: 20 40% 95%;
+    --muted:                160 30% 15%;
+    --muted-foreground:     150 15% 58%;
+    --accent:               160 30% 18%;
+    --accent-foreground:    20 40% 95%;
+    --destructive:          0 47% 56%;
     --destructive-foreground: 0 0% 100%;
-    --border:              25 18% 86%;
-    --input:               25 18% 86%;
-    --ring:                18 45% 56%;
-    --radius:              0.75rem;
-    --chart-1: 18 45% 56%;
-    --chart-2: 148 22% 46%;
-    --chart-3: 25 10% 67%;
+    --border:               160 32% 18%;
+    --input:                160 32% 18%;
+    --ring:                 12 75% 63%;
+    --radius:               0.75rem;
+    --chart-1: 12 75% 63%;
+    --chart-2: 140 48% 57%;
+    --chart-3: 150 15% 58%;
     --chart-4: 0 47% 56%;
-    --chart-5: 200 30% 50%;
-  }
-
-  .dark {
-    --background:          25 10% 13%;
-    --card:                25 10% 16%;
-    --card-foreground:     30 15% 88%;
-    --popover:             25 10% 13%;
-    --popover-foreground:  30 15% 88%;
-    --primary:             18 50% 62%;
-    --primary-foreground:  25 10% 10%;
-    --secondary:           25 10% 20%;
-    --secondary-foreground:30 15% 88%;
-    --muted:               25 10% 20%;
-    --muted-foreground:    25 8% 55%;
-    --accent:              18 35% 28%;
-    --accent-foreground:   18 50% 72%;
-    --destructive:         0 47% 48%;
-    --destructive-foreground: 0 0% 100%;
-    --border:              25 10% 24%;
-    --input:               25 10% 24%;
-    --ring:                18 50% 62%;
-    --chart-1: 18 50% 62%;
-    --chart-2: 148 28% 52%;
-    --chart-3: 25 8% 44%;
-    --chart-4: 0 47% 48%;
     --chart-5: 200 35% 55%;
   }
 }
@@ -93,10 +65,11 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3 {
-    font-family: 'Playfair Display', serif;
-    letter-spacing: -0.02em;
-  }
+  h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', serif;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+}
 }
 
 @layer utilities {
@@ -112,15 +85,15 @@
   }
   .font-helper { font-family: 'DM Sans', sans-serif; font-weight: 300; color: hsl(var(--muted-foreground)); }
 
-  /* Success */
-  .text-success           { color: #5E8C70; }
-  .bg-success             { background-color: #5E8C70; }
-  .bg-success\/20         { background-color: #C8DDD0; }
-  .text-success-foreground{ color: #fff; }
-  .border-success         { border-color: #5E8C70; }
+  /* Success — seed green */
+  .text-success            { color: #5EC47A; }
+  .bg-success              { background-color: #5EC47A; }
+  .bg-success\/20          { background-color: #1A3D28; }
+  .text-success-foreground { color: #0D1F1A; }
+  .border-success          { border-color: #5EC47A; }
 
-  /* Terracotta */
-  .text-terra    { color: #C47A5A; }
-  .bg-terra      { background-color: #C47A5A; }
-  .bg-terra\/15  { background-color: #EDD8CC; }
+  /* Terracotta — watermelon flesh */
+  .text-terra    { color: #E8705A; }
+  .bg-terra      { background-color: #E8705A; }
+  .bg-terra\/15  { background-color: #3D2420; }
 }

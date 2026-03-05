@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 const STORAGE_KEY = 'momentum_buddy_state';
-// ── Date helpers ──────────────────────────────────────────
+
 function today() {
   return new Date().toISOString().split('T')[0];
 }
@@ -16,27 +16,24 @@ function daysFromNow(n: number) {
   return d.toISOString().split('T')[0];
 }
 
-// ── Seed data factories ───────────────────────────────────
-
 const BASE_MILESTONE = {
   id: 'demo-milestone-1',
   status: 'active' as const,
-  createdAt: daysAgo(10),
+  createdAt: daysAgo(14),
   goalTitle: 'Complete AI PM Certification',
   goalType: 'certification' as const,
   deadlineType: 'fixed' as const,
-  deadline: daysFromNow(45),
+  deadline: daysFromNow(44),
   dailyMinutes: 60,
   startTime: '08:00',
   checkinTime: '21:00',
   channelType: 'telegram' as const,
   telegramHandle: '@demobeta',
-  activatedAt: daysAgo(10),
+  activatedAt: daysAgo(14),
 };
 
 const SEEDS: Record<string, object> = {
 
-  // 1 — Fresh start: no onboarding done yet
   fresh: {
     milestones: [],
     activeMilestoneId: null,
@@ -48,7 +45,6 @@ const SEEDS: Record<string, object> = {
     onboarded: false,
   },
 
-  // 2 — Checked in today: State A, today logged complete
   checked_in: {
     milestones: [BASE_MILESTONE],
     activeMilestoneId: 'demo-milestone-1',
@@ -66,7 +62,6 @@ const SEEDS: Record<string, object> = {
     onboarded: true,
   },
 
-  // 3 — Missed yesterday: State B — re-entry prompt visible
   missed_yesterday: {
     milestones: [BASE_MILESTONE],
     activeMilestoneId: 'demo-milestone-1',
@@ -83,7 +78,6 @@ const SEEDS: Record<string, object> = {
     onboarded: true,
   },
 
-  // 4 — On pause: State D — active pause covering today
   on_pause: {
     milestones: [BASE_MILESTONE],
     activeMilestoneId: 'demo-milestone-1',
@@ -98,14 +92,13 @@ const SEEDS: Record<string, object> = {
         milestoneId: 'demo-milestone-1',
         pausedFrom: daysAgo(2),
         pausedUntil: daysFromNow(3),
-      }
+      },
     ],
     achievements: [],
     feedback: [],
     onboarded: true,
   },
 
-  // 5 — Two milestones: one active, one placeholder
   two_milestones: {
     milestones: [
       BASE_MILESTONE,
@@ -116,7 +109,7 @@ const SEEDS: Record<string, object> = {
         goalTitle: 'Build side project portfolio',
         goalType: 'skill_building' as const,
         deadline: daysFromNow(90),
-      }
+      },
     ],
     activeMilestoneId: 'demo-milestone-1',
     logs: [
@@ -131,35 +124,35 @@ const SEEDS: Record<string, object> = {
     onboarded: true,
   },
 
-  // 6 — 5 days of history: 3 done, 2 misses, metrics visible
   five_days: {
-    milestones: [{ ...BASE_MILESTONE, createdAt: daysAgo(7), activatedAt: daysAgo(7) }],
+    milestones: [{ ...BASE_MILESTONE, createdAt: daysAgo(14), activatedAt: daysAgo(14) }],
     activeMilestoneId: 'demo-milestone-1',
     logs: [
-  { milestoneId: 'demo-milestone-1', date: daysAgo(5), completed: true, fallbackTriggered: false },
-  { milestoneId: 'demo-milestone-1', date: daysAgo(4), completed: false, fallbackTriggered: false },
-  { milestoneId: 'demo-milestone-1', date: daysAgo(3), completed: true, fallbackTriggered: false },
-  { milestoneId: 'demo-milestone-1', date: daysAgo(2), completed: false, fallbackTriggered: false },
-  { milestoneId: 'demo-milestone-1', date: daysAgo(1), completed: true, fallbackTriggered: false },
-],
+      { milestoneId: 'demo-milestone-1', date: daysAgo(9), completed: true, fallbackTriggered: false },
+      { milestoneId: 'demo-milestone-1', date: daysAgo(8), completed: false, fallbackTriggered: false },
+      { milestoneId: 'demo-milestone-1', date: daysAgo(7), completed: true, fallbackTriggered: false },
+      { milestoneId: 'demo-milestone-1', date: daysAgo(6), completed: false, fallbackTriggered: false },
+      { milestoneId: 'demo-milestone-1', date: daysAgo(5), completed: true, fallbackTriggered: false },
+      { milestoneId: 'demo-milestone-1', date: daysAgo(3), completed: true, fallbackTriggered: false },
+      { milestoneId: 'demo-milestone-1', date: daysAgo(2), completed: false, fallbackTriggered: false },
+      { milestoneId: 'demo-milestone-1', date: daysAgo(1), completed: true, fallbackTriggered: false },
+    ],
     commitments: [],
     pauses: [],
     achievements: [],
     feedback: [
-      { id: 'fb-1', milestoneId: 'demo-milestone-1', rating: 4, dayNumber: 7, recordedAt: daysAgo(1) }
+      { id: 'fb-1', milestoneId: 'demo-milestone-1', rating: 4, dayNumber: 7, recordedAt: daysAgo(3) },
     ],
     onboarded: true,
   },
 };
-
-// ── UI config ─────────────────────────────────────────────
 
 const STATES = [
   {
     key: 'fresh',
     label: 'Fresh Start',
     description: 'No data — lands on the welcome screen. Use this to demo onboarding.',
-    tag: 'State: New user',
+    tag: 'New user',
     redirectTo: '/',
     color: '#7A9E87',
     number: '01',
@@ -168,7 +161,7 @@ const STATES = [
     key: 'checked_in',
     label: 'Just Checked In',
     description: 'Today already logged. Dashboard in resting state — nothing left to do today.',
-    tag: 'State: A (normal)',
+    tag: 'State A',
     redirectTo: '/dashboard',
     color: '#5E8C70',
     number: '02',
@@ -177,7 +170,7 @@ const STATES = [
     key: 'missed_yesterday',
     label: 'Missed Yesterday',
     description: 'Yesterday was a miss. Re-entry prompt is visible. Use to demo recovery flow.',
-    tag: 'State: B (missed)',
+    tag: 'State B',
     redirectTo: '/dashboard',
     color: '#C47A5A',
     number: '03',
@@ -186,7 +179,7 @@ const STATES = [
     key: 'on_pause',
     label: 'On a Pause',
     description: 'Active pause covering today and the next 3 days. Pause banner visible.',
-    tag: 'State: D (paused)',
+    tag: 'State D',
     redirectTo: '/dashboard',
     color: '#9B8EA0',
     number: '04',
@@ -195,7 +188,7 @@ const STATES = [
     key: 'two_milestones',
     label: 'Two Milestones',
     description: 'One active milestone, one placeholder queued up. Shows multi-milestone view.',
-    tag: 'State: Multi-goal',
+    tag: 'Multi-goal',
     redirectTo: '/dashboard',
     color: '#7A8FA0',
     number: '05',
@@ -203,8 +196,8 @@ const STATES = [
   {
     key: 'five_days',
     label: '5 Days of History',
-    description: '3 check-ins, 2 misses, pulse feedback recorded. Metrics and pattern cards visible.',
-    tag: 'State: With data',
+    description: 'Multiple miss-recovery cycles, pulse feedback recorded. All metrics cards populated.',
+    tag: 'With data',
     redirectTo: '/dashboard',
     color: '#B85C38',
     number: '06',
@@ -212,13 +205,14 @@ const STATES = [
 ];
 
 export default function DemoLauncher() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
-function loadState(key: string, redirectTo: string) {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(SEEDS[key]));
-  window.location.href = redirectTo;
-}
+  function loadState(key: string, redirectTo: string) {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(SEEDS[key]));
+    window.location.href = redirectTo;
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -226,7 +220,6 @@ function loadState(key: string, redirectTo: string) {
       fontFamily: "'DM Sans', sans-serif",
       padding: '0',
     }}>
-      {/* Header */}
       <div style={{
         borderBottom: '1px solid #E2DDD5',
         padding: '24px 32px',
@@ -238,10 +231,10 @@ function loadState(key: string, redirectTo: string) {
         top: 0,
         zIndex: 10,
       }}>
-        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '20px', fontWeight: 700, color: '#3A3028' }}>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '20px', fontWeight: 700, color: '#F5EDE8' }}>
           Momentum Buddy
         </span>
-        <span style={{ color: '#B5AFA6', fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <span style={{ color: '#B5AFA6', fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
           Demo Launcher
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -250,15 +243,13 @@ function loadState(key: string, redirectTo: string) {
         </div>
       </div>
 
-      {/* Intro */}
       <div style={{ padding: '40px 32px 24px', maxWidth: '720px' }}>
         <p style={{ fontSize: '14px', color: '#6B5C4C', lineHeight: 1.7, margin: 0 }}>
-          Click any state to instantly load it. The app will open with that data already in place —
-          no waiting, no setup. To switch states mid-demo, come back here and click a different one.
+          Click any state to instantly load it. The app will open with that data already in place.
+          To switch states mid-demo, come back here and click a different one.
         </p>
       </div>
 
-      {/* Grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -279,9 +270,9 @@ function loadState(key: string, redirectTo: string) {
               cursor: 'pointer',
               transition: 'all 0.15s ease',
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: 'column' as const,
               gap: '12px',
-              position: 'relative',
+              position: 'relative' as const,
               overflow: 'hidden',
             }}
             onMouseEnter={e => {
@@ -295,9 +286,8 @@ function loadState(key: string, redirectTo: string) {
               (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
             }}
           >
-            {/* Number watermark */}
             <span style={{
-              position: 'absolute',
+              position: 'absolute' as const,
               top: '16px',
               right: '20px',
               fontSize: '11px',
@@ -308,26 +298,23 @@ function loadState(key: string, redirectTo: string) {
               {s.number}
             </span>
 
-            {/* Colour dot + tag */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-              <span style={{ fontSize: '11px', color: s.color, letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '11px', color: s.color, letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' as const }}>
                 {s.tag}
               </span>
             </div>
 
-            {/* Label */}
             <div style={{
               fontFamily: "'Playfair Display', serif",
               fontSize: '20px',
               fontWeight: 700,
-              color: '#3A3028',
+              color: '#F5EDE8',
               lineHeight: 1.2,
             }}>
               {s.label}
             </div>
 
-            {/* Description */}
             <p style={{
               fontSize: '13px',
               color: '#6B5C4C',
@@ -337,16 +324,12 @@ function loadState(key: string, redirectTo: string) {
               {s.description}
             </p>
 
-            {/* CTA */}
             <div style={{
               marginTop: '4px',
               fontSize: '12px',
               color: s.color,
               fontWeight: 600,
               letterSpacing: '0.04em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
             }}>
               Load this state →
             </div>
@@ -354,14 +337,13 @@ function loadState(key: string, redirectTo: string) {
         ))}
       </div>
 
-      {/* Footer tip */}
       <div style={{
         padding: '20px 32px',
         borderTop: '1px solid #E2DDD5',
         fontSize: '12px',
         color: '#B5AFA6',
       }}>
-        Tip: keep this tab open alongside the app tab during your demo. Switch states in seconds without touching the terminal.
+        Tip: keep this tab open alongside the app tab during your demo. Switch states in seconds.
       </div>
     </div>
   );
