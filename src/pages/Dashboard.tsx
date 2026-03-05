@@ -9,6 +9,7 @@ import { format, startOfWeek, addDays, differenceInDays, isToday, isBefore, pars
 import { ChevronRight, BarChart3, AlertCircle, CalendarCheck, PauseCircle, ChevronDown } from 'lucide-react';
 import PoweredByFooter from '@/components/PoweredByFooter';
 import { queueMissedNoPlanNudge, queueDeadlineNudge } from '@/lib/nudgeQueue';
+import DemoNudgeButton from '@/components/DemoNudgeButton';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -492,7 +493,7 @@ export default function Dashboard() {
           <PoweredByFooter />
         </div>
       </div>
-
+<DemoNudgeButton />
     </div>
   );
 }
