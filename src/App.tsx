@@ -12,6 +12,9 @@ import WeeklySummary from "./pages/WeeklySummary";
 import Settings from "./pages/Settings";
 import MilestoneComplete from "./pages/MilestoneComplete";
 import NotFound from "./pages/NotFound";
+import DemoLauncher from "./pages/DemoLauncher";
+// inside <Routes>:
+<Route path="/demo" element={<DemoLauncher />} />
 
 const queryClient = new QueryClient();
 
@@ -31,6 +34,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/complete" element={<MilestoneComplete />} />
             <Route path="*" element={<NotFound />} />
+            <Route path="/demo" element={<DemoLauncher />} />
           </Routes>
         </BrowserRouter>
       </AppProvider>
