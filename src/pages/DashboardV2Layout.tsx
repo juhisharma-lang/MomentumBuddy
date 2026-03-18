@@ -224,16 +224,37 @@ function ScreenSetup() {
   const canProceed2 = timeBlock !== null && telegramHandle.trim().length > 0;
 
   if (done) return (
-    <div style={{ padding: '20px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-      <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#1A3028', border: '1px solid #5EC47A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>✓</div>
-      <div style={{ fontSize: '13px', fontWeight: 500, color: '#F0ECE8' }}>You're set up</div>
-      <div style={{ fontSize: '10px', color: '#9898BA', textAlign: 'center', lineHeight: 1.6 }}>{goal}<br />{showCustom ? customMins : mins} min/day - Night - Telegram</div>
-      <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderLeft: '2px solid #5EC47A', borderRadius: '8px', padding: '10px 12px', width: '100%' }}>
-        <div style={{ fontSize: '10px', fontWeight: 500, color: '#F0ECE8', marginBottom: '3px' }}>Connect Telegram</div>
-        <div style={{ fontSize: '9px', color: '#9898BA', marginBottom: '8px' }}>Search @MomentumBuddyNotifyBot and tap Start. First check-in tonight.</div>
-        <div style={{ background: '#5EC47A', color: '#1A1A2E', borderRadius: '7px', padding: '7px', fontSize: '9px', fontWeight: 500, textAlign: 'center' }}>Open Telegram</div>
+    <div style={{ padding: '16px 14px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* Confirmation */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2px' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1A3028', border: '1px solid #5EC47A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>✓</div>
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 500, color: '#F0ECE8' }}>You are set up</div>
+          <div style={{ fontSize: '9px', color: '#9898BA' }}>{goal} - check-in at {exactTime} via Telegram</div>
+        </div>
       </div>
-      <div style={{ fontSize: '9px', color: '#5A5A7A', textAlign: 'center' }}>After this, the app is for viewing your progress.<br />Daily habit lives in Telegram.</div>
+
+      {/* Day 1 prediction card */}
+      <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderLeft: '2px solid #FF7B6B', borderRadius: '10px', padding: '10px 12px' }}>
+        <div style={{ fontSize: '8px', color: '#FF7B6B', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '5px' }}>What to expect</div>
+        <div style={{ fontSize: '11px', fontWeight: 500, color: '#F0ECE8', marginBottom: '5px' }}>Most learners miss their first session within 5 days.</div>
+        <div style={{ fontSize: '9px', color: '#9898BA', lineHeight: 1.6 }}>That is not failure - it is normal. When it happens, we will reach out and get you back on track the next day.</div>
+      </div>
+
+      {/* What happens next */}
+      <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderLeft: '2px solid #5EC47A', borderRadius: '10px', padding: '10px 12px' }}>
+        <div style={{ fontSize: '8px', color: '#5EC47A', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '5px' }}>Your north star</div>
+        <div style={{ fontSize: '11px', fontWeight: 500, color: '#F0ECE8', marginBottom: '5px' }}>Recovery speed</div>
+        <div style={{ fontSize: '9px', color: '#9898BA', lineHeight: 1.6 }}>We measure how fast you bounce back after a miss. The goal is not a perfect streak - it is getting back in one day instead of three.</div>
+      </div>
+
+      {/* Connect Telegram */}
+      <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderRadius: '10px', padding: '10px 12px' }}>
+        <div style={{ fontSize: '10px', fontWeight: 500, color: '#F0ECE8', marginBottom: '4px' }}>Connect Telegram to begin</div>
+        <div style={{ fontSize: '9px', color: '#9898BA', marginBottom: '8px' }}>Search @MomentumBuddyNotifyBot and tap Start.</div>
+        <div style={{ background: '#5EC47A', color: '#1A1A2E', borderRadius: '7px', padding: '8px', fontSize: '10px', fontWeight: 500, textAlign: 'center', cursor: 'pointer' }}>Open Telegram</div>
+      </div>
+      <div onClick={() => {}} style={{ fontSize: '9px', color: '#9898BA', textAlign: 'center', cursor: 'pointer', textDecoration: 'underline' }}>I have connected the bot - go to dashboard</div>
     </div>
   );
 
@@ -537,14 +558,28 @@ function DashboardChrome({ children, isPaused }: { children: React.ReactNode; is
 
 // ── State A ───────────────────────────────────────────────────────────────────
 function ScreenA() {
+  const [hasData] = useState(true); // toggle to false to see Day 1 state
   return (
     <DashboardChrome>
       <Pill label="On track" bg="#1A3028" color="#5EC47A" dot="#5EC47A" />
       <GoalLabel title="AI PM Certification" sub="You showed up today" />
       <WeekGrid pattern={['done','done','miss','done','done','fut','fut']} />
-      <RecoveryCard avg="1.2" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
-      <PatternCards gap={3} fragile="Wed" best={1} />
-      <Stats items={[{ num: 12, label: 'sessions logged' }]} />
+      {hasData ? (
+        <>
+          <RecoveryCard avg="1.2" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
+          <PatternCards gap={3} fragile="Wed" best={1} />
+          <Stats items={[{ num: 12, label: 'sessions logged' }]} />
+        </>
+      ) : (
+        <>
+          <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderLeft: '2px solid #5EC47A', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
+            <div style={{ fontSize: '9px', color: '#5EC47A', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>You showed up</div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#F0ECE8', marginBottom: '4px' }}>Session 1 logged.</div>
+            <div style={{ fontSize: '9px', color: '#9898BA', lineHeight: 1.6 }}>Your recovery speed card unlocks after your first miss and return. Keep going - the data builds over time.</div>
+          </div>
+          <Stats items={[{ num: 1, label: 'sessions logged' }]} />
+        </>
+      )}
     </DashboardChrome>
   );
 }
