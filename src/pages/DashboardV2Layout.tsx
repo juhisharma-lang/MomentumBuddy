@@ -555,7 +555,7 @@ function ScreenA() {
     <DashboardChrome>
       <Pill label="On track" bg="#1A3028" color="#5EC47A" dot="#5EC47A" />
       <GoalLabel title="AI PM Certification" sub="You showed up today" />
-      <WeekGrid pattern={['done','done','miss','done','done','fut','fut']} />
+      <WeekGrid pattern={['done','done','done','miss','done','fut','fut']} />
       {hasData ? (
         <>
           <RecoveryCard avg="1.2" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
@@ -587,10 +587,10 @@ function ScreenANotDone() {
         <CardTitle>Restart locked in</CardTitle>
         <CardBody>You replied "not done" tonight and committed to coming back tomorrow at 9 PM. Nothing to do right now.</CardBody>
       </Card>
-      <WeekGrid pattern={['done','done','done','done','miss','today','fut']} />
+      <WeekGrid pattern={['done','done','done','miss','miss','fut','fut']} />
       <RecoveryCard avg="1.2" best={1} trend="neutral" note="Recovery clock starts now. Last time you were back in 1 day." />
       <PatternCards gap={3} fragile="Wed" best={1} />
-      <Stats items={[{ num: 12, label: 'sessions logged' }]} />
+      <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
   );
 }
@@ -609,7 +609,7 @@ function ScreenB() {
           Commit to a restart time on Telegram
         </a>
       </Card>
-      <WeekGrid pattern={['done','done','done','done','miss','today','fut']} />
+      <WeekGrid pattern={['done','done','done','miss','today','fut','fut']} />
       <RecoveryCard avg="1.4" best={1} trend="neutral" note="Average time to bounce back after a miss. Your best is 1 day." />
       <PatternCards gap={3} fragile="Wed" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
@@ -718,10 +718,10 @@ function ScreenNightOwl() {
         <CardTitle>Wrap up your session</CardTitle>
         <CardBody>We won't count yesterday as a miss yet. Reply "done" to your notification before you go to sleep to secure the win.</CardBody>
       </Card>
-      <WeekGrid pattern={['done','done','miss','done','done','today','fut']} />
+      <WeekGrid pattern={['done','done','done','miss','today','fut','fut']} />
       <RecoveryCard avg="1.2" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
       <PatternCards gap={3} fragile="Wed" best={1} />
-      <Stats items={[{ num: 12, label: 'sessions logged' }]} />
+      <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
   );
 }
@@ -762,7 +762,7 @@ function ScreenLimbo() {
             <Btn bg="#2A2440" color="#B8A8E8" border="0.5px solid #B8A8E8">Open Telegram</Btn>
         </a>
       </Card>
-      <WeekGrid pattern={['done','done','miss','done','done','today','fut']} />
+      <WeekGrid pattern={['done','done','done','miss','miss','miss','today']} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
   );
