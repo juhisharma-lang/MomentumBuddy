@@ -339,39 +339,12 @@ function ScreenSetup() {
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <div onClick={() => setStep(2)} style={{ flex: '0 0 60px', background: 'transparent', border: '0.5px solid #32324A', borderRadius: '9px', padding: '9px', fontSize: '10px', color: '#9898BA', textAlign: 'center', cursor: 'pointer' }}>Back</div>
-            <div onClick={() => setStep(4)} style={{ flex: 1, background: '#5EC47A', color: '#1A1A2E', borderRadius: '9px', padding: '9px', fontSize: '10px', fontWeight: 500, textAlign: 'center', cursor: 'pointer' }}>'Next - connect Telegram'</div>
+            <div onClick={() => setDone(true)} style={{ flex: 1, background: '#5EC47A', color: '#1A1A2E', borderRadius: '9px', padding: '9px', fontSize: '10px', fontWeight: 500, textAlign: 'center', cursor: 'pointer' }}>Let's go</div>
           </div>
         </>
       )}
 
-      {step === 5 && (
-        <>
-          <div style={{ fontSize: '9px', color: '#9898BA', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px' }}>All set</div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', paddingTop: '8px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#1A3028', border: '1px solid #5EC47A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>✓</div>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: '#F0ECE8' }}>You are set up</div>
-            <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderLeft: '2px solid #5EC47A', borderRadius: '8px', padding: '10px 12px', width: '100%' }}>
-              <div style={{ fontSize: '10px', fontWeight: 500, color: '#F0ECE8', marginBottom: '3px' }}>Check your inbox</div>
-              <div style={{ fontSize: '9px', color: '#9898BA' }}>First check-in nudge arrives tonight at {exactTime}.</div>
-            </div>
-            <div style={{ fontSize: '9px', color: '#5A5A7A', textAlign: 'center', lineHeight: 1.5 }}>Upgrade to Telegram for two-way check-ins and faster recovery flows.</div>
-          </div>
-          <div onClick={() => setDone(true)} style={{ background: '#5EC47A', color: '#1A1A2E', borderRadius: '9px', padding: '9px', fontSize: '10px', fontWeight: 500, textAlign: 'center', cursor: 'pointer', marginTop: '14px' }}>Go to dashboard</div>
-        </>
-      )}
 
-      {step === 4 && (
-        <>
-          <div style={{ fontSize: '9px', color: '#9898BA', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '12px' }}>Connect Telegram</div>
-          <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderLeft: '2px solid #5EC47A', borderRadius: '10px', padding: '12px', marginBottom: '10px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 500, color: '#F0ECE8', marginBottom: '6px' }}>One last thing</div>
-            <div style={{ fontSize: '10px', color: '#9898BA', lineHeight: 1.6, marginBottom: '10px' }}>Search <span style={{ color: '#F0ECE8' }}>@MomentumBuddyNotifyBot</span> on Telegram and tap Start. This is how we check in with you daily.</div>
-            <div style={{ background: '#5EC47A', color: '#1A1A2E', borderRadius: '8px', padding: '10px', fontSize: '11px', fontWeight: 500, textAlign: 'center', cursor: 'pointer' }}>Open Telegram</div>
-          </div>
-          <div style={{ fontSize: '9px', color: '#5A5A7A', marginBottom: '16px', lineHeight: 1.5 }}>Without this step, check-in nudges cannot be delivered. Open Telegram, start the bot, then come back here.</div>
-          <div onClick={() => setDone(true)} style={{ fontSize: '10px', color: '#9898BA', textAlign: 'center', cursor: 'pointer', textDecoration: 'underline' }}>I have connected the bot - go to dashboard</div>
-        </>
-      )}
     </div>
   );
 }
