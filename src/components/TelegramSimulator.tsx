@@ -18,6 +18,9 @@ const SCRIPTS: Record<string, Message[]> = {
     { id: 2, from: 'user', text: 'done', delay: 2200 },
     { id: 3, from: 'bot', text: 'Logged ✓  See you tomorrow.', delay: 900, accent: 'green' },
   ],
+  A_night_owl: [
+    { id: 1, from: 'bot', text: 'It\'s 9 PM — did you get your AI PM Certification session in today?\n\nReply done if yes, or not done if you missed.', delay: 600, accent: 'green' },
+  ],
   A_notdone: [
     { id: 1, from: 'bot', text: 'It\'s 9 PM — did you get your AI PM Certification session in today?\n\nReply done if yes, or not done if you missed.', delay: 600, accent: 'green' },
     { id: 2, from: 'user', text: 'not done', delay: 2200 },
@@ -29,6 +32,9 @@ const SCRIPTS: Record<string, Message[]> = {
     { id: 1, from: 'bot', text: 'You missed yesterday\'s session and haven\'t planned a restart yet.\n\nWhen are you coming back? Reply with a time.\n\ne.g. tomorrow 9pm', delay: 600, accent: 'terra' },
     { id: 2, from: 'user', text: 'tomorrow 9pm', delay: 2800 },
     { id: 3, from: 'bot', text: 'Locked in. I will check in tomorrow at 8:30 PM.\n\nYou\'ve got this.', delay: 900, accent: 'terra' },
+  ],
+  B_double_miss: [
+    { id: 1, from: 'bot', text: 'You missed your planned restart time yesterday.\n\nAre you ready to come back today, or do you want to pause?', delay: 600, accent: 'terra' },
   ],
   C: [
     { id: 1, from: 'bot', text: 'You committed to restarting tonight at 9 PM — that\'s 30 minutes away.\n\nReady?', delay: 600, accent: 'green' },
@@ -43,12 +49,20 @@ const SCRIPTS: Record<string, Message[]> = {
     { id: 2, from: 'user', text: 'yes', delay: 2400 },
     { id: 3, from: 'bot', text: 'Back in. See you tonight at 9 PM.', delay: 800, accent: 'purple' },
   ],
+  D_limbo: [
+    { id: 1, from: 'bot', text: 'Your pause runs until Sunday.\n\nStill paused - I will reach out when it ends.', delay: 600, accent: 'purple' },
+    { id: 2, from: 'user', text: 'I\'m back', delay: 2400 },
+    { id: 3, from: 'bot', text: 'Back sooner! Did you already get your session in today?', delay: 800, accent: 'purple' },
+  ],
   D_early: [
     { id: 1, from: 'bot', text: 'Your pause runs until Sunday.\n\nStill paused - I will reach out when it ends.', delay: 600, accent: 'purple' },
     { id: 2, from: 'user', text: 'I\'m back', delay: 2400 },
     { id: 3, from: 'bot', text: 'Back sooner - did you already get your session in today?', delay: 800, accent: 'purple' },
     { id: 4, from: 'user', text: 'not yet', delay: 1800 },
     { id: 5, from: 'bot', text: 'Got it - I will check in with you tonight at your usual time.', delay: 800, accent: 'purple' },
+  ],
+  E_SOS: [
+    { id: 1, from: 'bot', text: '⚠️ Delivery failed. The bot has been blocked or the chat was deleted.', delay: 0, accent: 'terra' }
   ],
   multi: [
     { id: 1, from: 'bot', text: 'Portfolio project — it\'s 7 PM.\n\nDid you get your session in? Reply done.', delay: 600, accent: 'green' },
