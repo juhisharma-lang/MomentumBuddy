@@ -203,7 +203,7 @@ function ScreenHome({ onGetStarted }: { onGetStarted: () => void }) {
 }
 
 // ── Setup screen (interactive 3 steps) ───────────────────────────────────────
-function ScreenSetup() {
+function ScreenSetup({ onNavigate }: { onNavigate: (key: string) => void }) {
   const [step, setStep] = useState(1);
   const [goal, setGoal] = useState('AI PM Certification');
   const [mins, setMins] = useState<number | null>(45);
@@ -254,7 +254,7 @@ function ScreenSetup() {
         <div style={{ fontSize: '9px', color: '#9898BA', marginBottom: '8px' }}>Search @MomentumBuddyNotifyBot and tap Start.</div>
         <div style={{ background: '#5EC47A', color: '#1A1A2E', borderRadius: '7px', padding: '8px', fontSize: '10px', fontWeight: 500, textAlign: 'center', cursor: 'pointer' }}>Open Telegram</div>
       </div>
-      <div onClick={() => {}} style={{ fontSize: '9px', color: '#9898BA', textAlign: 'center', cursor: 'pointer', textDecoration: 'underline' }}>I have connected the bot - go to dashboard</div>
+      <div onClick={() => onNavigate('A')} style={{ fontSize: '9px', color: '#9898BA', textAlign: 'center', cursor: 'pointer', textDecoration: 'underline' }}>I have connected the bot - go to dashboard</div>
     </div>
   );
 
@@ -691,7 +691,7 @@ function ScreenMulti() {
 function AppScreen({ stateKey, onNavigate }: { stateKey: string; onNavigate: (key: string) => void }) {
   const screens: Record<string, React.ReactNode> = {
     home: <ScreenHome onGetStarted={() => onNavigate('setup')} />,
-    setup: <ScreenSetup />,
+    setup: <ScreenSetup onNavigate={onNavigate} />,
     A: <ScreenA />,
     A_notdone: <ScreenANotDone />,
     B: <ScreenB />,
