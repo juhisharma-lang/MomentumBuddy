@@ -21,12 +21,20 @@ const STATES = [
     annotation: { trigger: 'User replied "done" to tonight\'s check-in nudge on Telegram.', app: 'Dashboard shows session logged, week grid, recovery speed. Visited occasionally - not daily.', telegram: 'Bot nudged at 9 PM: "did you get your session in?" User replied done. Bot confirmed.' },
   },
   {
+    key: 'A_night_owl', label: 'Night Owl',
+    annotation: { trigger: 'Midnight passed but it is before the morning check cutoff (e.g., 4:00 AM).', app: 'Dashboard shows "Late Night" pending state instead of immediately missing.', telegram: 'No nudge yet. Waiting for user to wrap up night work and reply.' },
+  },
+  {
     key: 'A_notdone', label: 'A - Not done',
     annotation: { trigger: 'User replied "not done" to tonight\'s check-in nudge - same night, no gap.', app: 'Dashboard moves to missed state. App reflects what happened in Telegram.', telegram: 'Bot immediately asks for restart time. User commits. App enters State C.' },
   },
   {
     key: 'B', label: 'B - Missed',
     annotation: { trigger: 'User did not reply to yesterday\'s nudge at all. Bot detects silence by midnight.', app: 'Dashboard shows restart prompt. Points to Telegram as primary action path.', telegram: 'Next morning bot reaches out: "You missed yesterday - when are you coming back?"' },
+  },
+  {
+    key: 'B_double_miss', label: 'Double Miss',
+    annotation: { trigger: 'User missed yesterday, committed to restart today, but missed the restart time.', app: 'Dashboard asks if they are ready to come back or want to extend their pause.', telegram: 'Next day at usual check-in time bot asks "Are you ready to come back or want to pause?"' },
   },
   {
     key: 'C', label: 'C - Committed',
@@ -37,10 +45,21 @@ const STATES = [
     annotation: { trigger: 'User proactively set a pause from Settings. No miss - deliberate rest.', app: 'Dashboard shows pause banner with end date. "I\'m back sooner" reveals intent split.', telegram: 'Bot is silent during pause. On pause end day, bot reaches out to welcome back.' },
   },
   {
+    key: 'D_limbo', label: 'Resuming Limbo',
+    annotation: { trigger: 'User replied "I\'m back" on Telegram but hasn\'t answered "done or schedule nudge" yet.', app: 'Dashboard shows they are back online, waiting for their session log.', telegram: 'Bot asked "Did you do your session or schedule later?" - waiting for reply.' },
+  },
+  {
     key: 'D_early', label: 'D - Back early',
     annotation: { trigger: 'User messages the bot "I\'m back" before the pause end date.', app: 'App resumes once bot logs the intent. Pause lifted automatically.', telegram: 'Bot asks if session is done or schedules nudge for later that day.' },
   },
-
+  {
+    key: 'E_SOS', label: 'SOS Disconnect',
+    annotation: { trigger: 'Webhook delivery failed. User likely blocked bot or deleted chat.', app: 'Dashboard takes over with massive red warning to reconnect Telegram to continue.', telegram: 'Dead link. Messages fail to deliver.' },
+  },
+  {
+    key: 'multi', label: 'Multi-Goal',
+    annotation: { trigger: 'User has more than one active milestone.', app: 'Dashboard shows a toggler or unified view for both goals.', telegram: 'Bot handles done/miss per milestone or with "done both" shortcut.' },
+  },
 ];
 
 // ── Demo state loader ─────────────────────────────────────────────────────────
@@ -586,9 +605,9 @@ function ScreenB() {
       <Card accent="#FF7B6B">
         <CardTitle>Plan your restart</CardTitle>
         <CardBody>A specific time makes follow-through 3x more likely.</CardBody>
-        <div style={{ background: '#3D1F1C', border: '0.5px solid #FF7B6B', borderRadius: '8px', padding: '8px 10px', fontSize: '9px', color: '#FF7B6B', textAlign: 'center', lineHeight: 1.5 }}>
-          Reply to your Telegram message with a restart time.<br />e.g. tomorrow 9pm
-        </div>
+        <a href="tg://resolve?domain=MomentumBuddyNotifyBot&start=restart" style={{ display: 'block', textDecoration: 'none', background: '#3D1F1C', border: '0.5px solid #FF7B6B', borderRadius: '8px', padding: '8px 10px', fontSize: '9px', color: '#FF7B6B', textAlign: 'center', lineHeight: 1.5 }}>
+          Commit to a restart time on Telegram
+        </a>
       </Card>
       <WeekGrid pattern={['done','done','done','done','miss','today','fut']} />
       <RecoveryCard avg="1.4" best={1} trend="neutral" note="Average time to bounce back after a miss. Your best is 1 day." />
@@ -687,18 +706,102 @@ function ScreenMulti() {
   );
 }
 
+
+// ── State Night Owl ───────────────────────────────────────────────────────────
+function ScreenNightOwl() {
+  return (
+    <DashboardChrome>
+      <Pill label="Pending - Late Night" bg="#1A3028" color="#5EC47A" dot="#F0ECE8" />
+      <GoalLabel title="AI PM Certification" sub="Working late?" />
+      <div style={{ fontSize: '9px', color: '#9898BA', marginBottom: '12px' }}>It's past midnight but before the morning cutoff.</div>
+      <Card accent="#F0ECE8">
+        <CardTitle>Wrap up your session</CardTitle>
+        <CardBody>We won't count yesterday as a miss yet. Reply "done" to your notification before you go to sleep to secure the win.</CardBody>
+      </Card>
+      <WeekGrid pattern={['done','done','miss','done','done','today','fut']} />
+      <RecoveryCard avg="1.2" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
+      <PatternCards gap={3} fragile="Wed" best={1} />
+      <Stats items={[{ num: 12, label: 'sessions logged' }]} />
+    </DashboardChrome>
+  );
+}
+
+// ── State Double Miss ─────────────────────────────────────────────────────────
+function ScreenDoubleMiss() {
+  return (
+    <DashboardChrome>
+      <Pill label="Struggling to return" bg="#3D1F1C" color="#FF7B6B" dot="#FF7B6B" />
+      <GoalLabel title="AI PM Certification" sub="Need more time?" />
+      <div style={{ fontSize: '9px', color: '#9898BA', marginBottom: '12px' }}>You missed your planned restart time yesterday.</div>
+      <Card accent="#FF7B6B">
+        <CardTitle>Do you want to pause?</CardTitle>
+        <CardBody>It looks like things are busy. Reply on Telegram if you are ready to come back today or if you want to set a proactive pause.</CardBody>
+        <a href="tg://resolve?domain=MomentumBuddyNotifyBot&start=pause" style={{ display: 'block', textDecoration: 'none' }}>
+            <Btn bg="#3D1F1C" color="#FF7B6B" border="0.5px solid #FF7B6B">Open Telegram to decide</Btn>
+        </a>
+      </Card>
+      <WeekGrid pattern={['done','done','done','miss','miss','today','fut']} />
+      <RecoveryCard avg="1.4" best={1} trend="worsening" note="This is a double miss. A planned pause helps protect your momentum data." />
+      <PatternCards gap={3} fragile="Wed" best={1} />
+      <Stats items={[{ num: 11, label: 'sessions logged' }]} />
+    </DashboardChrome>
+  );
+}
+
+// ── State Limbo ───────────────────────────────────────────────────────────────
+function ScreenLimbo() {
+  return (
+    <DashboardChrome>
+      <Pill label="Resuming" bg="#2A2440" color="#B8A8E8" dot="#F0ECE8" />
+      <GoalLabel title="AI PM Certification" sub="Welcome back!" />
+      <div style={{ fontSize: '9px', color: '#9898BA', marginBottom: '12px' }}>You messaged "I'm back" on Telegram.</div>
+      <Card accent="#B8A8E8">
+        <CardTitle>Finish setting up your return</CardTitle>
+        <CardBody>We just asked you on Telegram: Did you get your session in today, or do you want a nudge later? Reply there to continue.</CardBody>
+        <a href="tg://resolve?domain=MomentumBuddyNotifyBot" style={{ display: 'block', textDecoration: 'none' }}>
+            <Btn bg="#2A2440" color="#B8A8E8" border="0.5px solid #B8A8E8">Open Telegram</Btn>
+        </a>
+      </Card>
+      <WeekGrid pattern={['done','done','miss','done','done','today','fut']} />
+      <Stats items={[{ num: 11, label: 'sessions logged' }]} />
+    </DashboardChrome>
+  );
+}
+
+// ── State SOS ─────────────────────────────────────────────────────────────────
+function ScreenSOS() {
+  return (
+    <div style={{ padding: '14px 14px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ background: '#3D1F1C', border: '1px solid #FF7B6B', borderRadius: '10px', padding: '16px 12px', marginTop: 'auto', marginBottom: 'auto' }}>
+        <div style={{ fontSize: '24px', marginBottom: '10px', textAlign: 'center' }}>⚠️</div>
+        <div style={{ fontSize: '11px', fontWeight: 500, color: '#FF7B6B', marginBottom: '8px', textAlign: 'center' }}>Bot Disconnected</div>
+        <div style={{ fontSize: '9px', color: '#F0ECE8', lineHeight: 1.5, marginBottom: '12px', textAlign: 'center' }}>
+          We failed to deliver your notifications. It looks like you deleted the chat or blocked the bot.
+        </div>
+        <a href="tg://resolve?domain=MomentumBuddyNotifyBot&start=reconnect" style={{ display: 'block', textDecoration: 'none', background: '#FF7B6B', color: '#1A1A2E', borderRadius: '8px', padding: '10px', fontSize: '10px', fontWeight: 500, textAlign: 'center' }}>
+          Reconnect Telegram to continue
+        </a>
+      </div>
+    </div>
+  );
+}
+
 // ── Phone shell ───────────────────────────────────────────────────────────────
 function AppScreen({ stateKey, onNavigate }: { stateKey: string; onNavigate: (key: string) => void }) {
   const screens: Record<string, React.ReactNode> = {
     home: <ScreenHome onGetStarted={() => onNavigate('setup')} />,
     setup: <ScreenSetup onNavigate={onNavigate} />,
     A: <ScreenA />,
+    A_night_owl: <ScreenNightOwl />,
     A_notdone: <ScreenANotDone />,
     B: <ScreenB />,
+    B_double_miss: <ScreenDoubleMiss />,
     C: <ScreenC />,
     D: <ScreenD onEarlyResume={() => onNavigate('D_early')} />,
+    D_limbo: <ScreenLimbo />,
     D_early: <ScreenDEarly />,
-    multi: <ScreenMulti />,  // kept for reference, tab removed from nav
+    E_SOS: <ScreenSOS />,
+    multi: <ScreenMulti />,
   };
   return (
     <div style={{ background: '#1A1A2E', border: '0.5px solid #32324A', borderRadius: '28px', overflow: 'hidden', width: '220px', height: '480px', display: 'flex', flexDirection: 'column', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
@@ -736,7 +839,7 @@ export default function DashboardV2Layout() {
 
   return (
     <>
-      <HamburgerMenu />
+      {/* <HamburgerMenu /> */}
       <div style={{ fontFamily: 'system-ui, sans-serif', marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)', width: '100vw', background: '#1A1A2E' }}>
 
         {/* Header */}
