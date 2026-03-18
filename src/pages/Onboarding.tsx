@@ -10,7 +10,6 @@ import { format } from 'date-fns';
 import { CalendarIcon, Briefcase, Award, Lightbulb, Sparkles, Check, Send, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PoweredByFooter from '@/components/PoweredByFooter';
-
 const GOAL_TYPES: { value: GoalType; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: 'job_switch',     label: 'Job Switch',    icon: <Briefcase className="w-5 h-5" />, desc: 'Preparing for a career move' },
   { value: 'certification',  label: 'Certification', icon: <Award className="w-5 h-5" />,     desc: 'Studying for an exam' },
@@ -37,6 +36,7 @@ export default function Onboarding() {
   const [channelType, setChannelType]         = useState<ChannelType | null>(null);
   const [telegramHandle, setTelegramHandle]   = useState('');
   const [email, setEmail]                     = useState('');
+  const [showCustomMinutes, setShowCustomMinutes] = useState(false); // ← add here
 
   const channelFilled =
     channelType === 'telegram' ? telegramHandle.trim().length > 0
@@ -217,58 +217,86 @@ export default function Onboarding() {
           )}
         </OnboardingCard>
 
-        {/* 4 — Daily minutes */}
-        <OnboardingCard number={4} label="Daily commitment" filled={dailyMinutes !== null}>
-          <div className="grid grid-cols-4 gap-2">
-            {MINUTE_OPTIONS.map(m => (
-              <button
-                key={m}
-                onClick={() => setDailyMinutes(m)}
-                className={cn(
-                  "py-4 rounded-lg border-2 font-semibold text-lg transition-all",
-                  dailyMinutes === m
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border bg-background text-foreground hover:border-primary/30"
-                )}
-              >
-                {m}
-                <span className="block text-xs font-normal text-muted-foreground">min</span>
-              </button>
-            ))}
-          </div>
-        </OnboardingCard>
+{/* 4 — Daily minutes */}
+<OnboardingCard number={4} label="Daily commitment" filled={dailyMinutes !== null}>
+  <div className="grid grid-cols-4 gap-2 mb-2">
+    {MINUTE_OPTIONS.map(m => (
+      <button
+        key={m}
+        onClick={() => { setDailyMinutes(m); setShowCustomMinutes(false); }}
+        className={cn(
+          "py-4 rounded-lg border-2 font-semibold text-lg transition-all",
+          dailyMinutes === m && !showCustomMinutes
+            ? "border-primary bg-primary/5 text-primary"
+            : "border-border bg-background text-foreground hover:border-primary/30"
+        )}
+      >
+        {m}
+        <span className="block text-xs font-normal text-muted-foreground">min</span>
+      </button>
+    ))}
+  </div>
+  <button
+    onClick={() => { setShowCustomMinutes(true); setDailyMinutes(null); }}
+    className={cn(
+      "w-full py-2.5 rounded-lg border-2 text-sm font-medium transition-all",
+      showCustomMinutes ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground"
+    )}
+  >
+    Custom
+  </button>
+  {showCustomMinutes && (
+    <Input
+      type="number"
+      placeholder="e.g. 20"
+      className="bg-background mt-2"
+      onChange={e => setDailyMinutes(parseInt(e.target.value) || null)}
+    />
+  )}
+</OnboardingCard>
+{/* 5 — Schedule */}
+<OnboardingCard number={5} label="When should we check in with you?" filled={checkinTime !== ''}>
+  <div className="grid grid-cols-2 gap-2 mb-3">
+    {[
+      { label: 'Morning',   sub: '6–9 AM',   value: '07:30' },
+      { label: 'Afternoon', sub: '12–3 PM',  value: '13:30' },
+      { label: 'Evening',   sub: '6–9 PM',   value: '19:30' },
+      { label: 'Night',     sub: '9–11 PM',  value: '21:00' },
+    ].map(t => (
+      <button
+        key={t.value}
+        onClick={() => { setCheckinTime(t.value); setStartTime(t.value); }}
+        className={cn(
+          "py-3 px-3 rounded-lg border-2 text-left transition-all",
+          checkinTime && checkinTime === t.value || 
+          (checkinTime && checkinTime !== '07:30' && checkinTime !== '13:30' && checkinTime !== '19:30' && checkinTime !== '21:00' && t.value === startTime)
+            ? "border-primary bg-primary/5" 
+            : "border-border bg-background"
+        )}
+      >
+        <div className="text-[14px] font-semibold text-foreground">{t.label}</div>
+        <div className="text-xs text-muted-foreground">{t.sub}</div>
+      </button>
+    ))}
+  </div>
 
-        {/* 5 — Schedule */}
-        <OnboardingCard number={5} label="Your schedule" filled={startTime !== '' && checkinTime !== ''}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Preferred learning time
-              </label>
-              <Input
-                type="time"
-                value={startTime}
-                onChange={e => setStartTime(e.target.value)}
-                className="bg-background"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Evening check-in time
-              </label>
-              <Input
-                type="time"
-                value={checkinTime}
-                onChange={e => setCheckinTime(e.target.value)}
-                className="bg-background"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">
-                We'll message you to ask if you got your session in.
-              </p>
-            </div>
-          </div>
-        </OnboardingCard>
-
+  {startTime !== '' && (
+    <div className="mt-1">
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+        What time exactly?
+      </label>
+      <Input
+        type="time"
+        value={checkinTime}
+        onChange={e => setCheckinTime(e.target.value)}
+        className="bg-background"
+      />
+      <p className="text-xs text-muted-foreground mt-1.5">
+        We'll send your daily check-in at this exact time.
+      </p>
+    </div>
+  )}
+</OnboardingCard>
         {/* 6 — Channel */}
         <OnboardingCard number={6} label="Where should we check in?" filled={channelFilled}>
           <div className="flex gap-2 mb-4">

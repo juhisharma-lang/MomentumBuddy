@@ -5,50 +5,50 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────
-   Momentum Buddy — Watermelon Splash theme
+   Momentum Buddy — Midnight & Coral theme
 
    Typography:
      POP  → Playfair Display 700/900 + DM Sans 600
      MUTE → DM Sans 300 + color: text-muted
 
    Palette:
-     bg         #0D1F1A  deep watermelon rind green
-     surface    #132820  card surface
-     surface2   #1A3328  elevated card
-     border     #1F3D2F  subtle border
-     text       #F5EDE8  warm cream
-     muted      #8FA898  sage grey
-     terra      #E8705A  watermelon flesh — primary
-     terra/lt   #3D2420  terra tint bg
-     green      #5EC47A  seed green — success
-     green/lt   #1A3D28  green tint bg
+     bg         #1A1A2E  deep midnight indigo
+     surface    #22223A  card surface
+     surface2   #2A2A46  elevated card
+     border     #32324A  subtle border
+     text       #F0ECE8  soft warm white — higher contrast than before
+     muted      #9898BA  blue-grey muted — more readable on indigo
+     primary    #FF7B6B  warm coral — action colour
+     coral/lt   #3D1F1C  coral tint bg
+     green      #5EC47A  seed green — success / completion
+     green/lt   #1A3028  green tint bg
 ─────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
-    --background:           160 38% 9%;
-    --foreground:           20 40% 95%;
-    --card:                 160 35% 11%;
-    --card-foreground:      20 40% 95%;
-    --popover:              160 38% 9%;
-    --popover-foreground:   20 40% 95%;
-    --primary:              12 75% 63%;
+    --background:           234 26% 14%;
+    --foreground:           25 20% 93%;
+    --card:                 234 24% 18%;
+    --card-foreground:      25 20% 93%;
+    --popover:              234 26% 14%;
+    --popover-foreground:   25 20% 93%;
+    --primary:              5 100% 71%;
     --primary-foreground:   0 0% 100%;
-    --secondary:            160 30% 15%;
-    --secondary-foreground: 20 40% 95%;
-    --muted:                160 30% 15%;
-    --muted-foreground:     150 15% 58%;
-    --accent:               160 30% 18%;
-    --accent-foreground:    20 40% 95%;
+    --secondary:            234 22% 22%;
+    --secondary-foreground: 25 20% 93%;
+    --muted:                234 22% 22%;
+    --muted-foreground:     234 20% 65%;
+    --accent:               234 22% 26%;
+    --accent-foreground:    25 20% 93%;
     --destructive:          0 47% 56%;
     --destructive-foreground: 0 0% 100%;
-    --border:               160 32% 18%;
-    --input:                160 32% 18%;
-    --ring:                 12 75% 63%;
+    --border:               234 20% 30%;
+    --input:                234 20% 30%;
+    --ring:                 5 100% 71%;
     --radius:               0.75rem;
-    --chart-1: 12 75% 63%;
+    --chart-1: 5 100% 71%;
     --chart-2: 140 48% 57%;
-    --chart-3: 150 15% 58%;
+    --chart-3: 234 20% 65%;
     --chart-4: 0 47% 56%;
     --chart-5: 200 35% 55%;
   }
@@ -66,10 +66,10 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', serif;
-  letter-spacing: -0.02em;
-  color: hsl(var(--foreground));
-}
+    font-family: 'Playfair Display', serif;
+    letter-spacing: -0.02em;
+    color: hsl(var(--foreground));
+  }
 }
 
 @layer utilities {
@@ -88,12 +88,26 @@
   /* Success — seed green */
   .text-success            { color: #5EC47A; }
   .bg-success              { background-color: #5EC47A; }
-  .bg-success\/20          { background-color: #1A3D28; }
-  .text-success-foreground { color: #0D1F1A; }
+  .bg-success\/20          { background-color: #1A3028; }
+  .text-success-foreground { color: #1A1A2E; }
   .border-success          { border-color: #5EC47A; }
 
-  /* Terracotta — watermelon flesh */
-  .text-terra    { color: #E8705A; }
-  .bg-terra      { background-color: #E8705A; }
-  .bg-terra\/15  { background-color: #3D2420; }
+  /* Coral — primary action */
+  .text-terra    { color: #FF7B6B; }
+  .bg-terra      { background-color: #FF7B6B; }
+  .bg-terra\/15  { background-color: #3D1F1C; }
+}
+
+/* ── Viewport constraint — phone column on desktop ── */
+body {
+  background-color: #252540 !important;
+}
+
+#root {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: hsl(var(--background));
+  position: relative;
+  box-shadow: 0 0 60px rgba(0,0,0,0.3);
 }

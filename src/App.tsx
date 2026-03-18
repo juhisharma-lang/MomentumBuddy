@@ -13,10 +13,34 @@ import Settings from "./pages/Settings";
 import MilestoneComplete from "./pages/MilestoneComplete";
 import NotFound from "./pages/NotFound";
 import DemoLauncher from "./pages/DemoLauncher";
-// inside <Routes>:
-<Route path="/demo" element={<DemoLauncher />} />
+import DevModeBar, { useDevMode } from "@/components/DevModeBar";
+import DashboardV2Layout from './pages/DashboardV2Layout';
+import OnboardingV2 from "./pages/OnboardingV2";
+import { Navigate } from 'react-router-dom';
+
 
 const queryClient = new QueryClient();
+
+const AppInner = () => {
+  const devMode = useDevMode();
+  return (
+    <BrowserRouter>
+      <DevModeBar />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/onboarding" element={devMode === 'newui' ? <OnboardingV2 /> : <Onboarding />} />
+<Route path="/dashboard" element={devMode === 'newui' ? <DashboardV2Layout /> : <Dashboard />} />
+        <Route path="/checkin" element={<CheckIn />} />
+        <Route path="/weekly" element={<WeeklySummary />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/complete" element={<MilestoneComplete />} />
+        <Route path="*" element={<NotFound />} />
+        <Route path="/onboarding" element={devMode === 'newui' ? <Navigate to="/dashboard" replace /> : <Onboarding />} />
+<Route path="/dashboard" element={devMode === 'newui' ? <DashboardV2Layout /> : <Dashboard />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -24,19 +48,7 @@ const App = () => (
       <AppProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/checkin" element={<CheckIn />} />
-            <Route path="/weekly" element={<WeeklySummary />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/complete" element={<MilestoneComplete />} />
-            <Route path="*" element={<NotFound />} />
-            <Route path="/demo" element={<DemoLauncher />} />
-          </Routes>
-        </BrowserRouter>
+        <AppInner />
       </AppProvider>
     </TooltipProvider>
   </QueryClientProvider>

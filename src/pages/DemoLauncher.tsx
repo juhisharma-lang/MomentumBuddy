@@ -231,7 +231,7 @@ export default function DemoLauncher() {
         top: 0,
         zIndex: 10,
       }}>
-        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '20px', fontWeight: 700, color: '#F5EDE8' }}>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '20px', fontWeight: 700, color: '#F0ECE8' }}>
           Momentum Buddy
         </span>
         <span style={{ color: '#B5AFA6', fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
@@ -309,7 +309,7 @@ export default function DemoLauncher() {
               fontFamily: "'Playfair Display', serif",
               fontSize: '20px',
               fontWeight: 700,
-              color: '#F5EDE8',
+              color: '#F0ECE8',
               lineHeight: 1.2,
             }}>
               {s.label}

@@ -135,13 +135,13 @@ function MonthlyBars({ buckets }: { buckets: { label: string; completed: number;
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
             <div
               className="w-full rounded-sm overflow-hidden relative"
-              style={{ height: `${heightPct * 0.48}px`, background: '#1A3328', minHeight: '8px' }}
+              style={{ height: `${heightPct * 0.48}px`, background: '#2A2A46', minHeight: '8px' }}
             >
               <div
                 className="absolute bottom-0 left-0 right-0 rounded-sm transition-all"
                 style={{
                   height: `${fillPct}%`,
-                  background: rate >= 0.7 ? '#5EC47A' : rate >= 0.4 ? '#E8705A' : '#8FA898',
+                  background: rate >= 0.7 ? '#5EC47A' : rate >= 0.4 ? '#FF7B6B' : '#9898BA',
                 }}
               />
             </div>
@@ -273,7 +273,7 @@ export default function WeeklySummary() {
           </div>
 
           {/* Insight */}
-            <Card className="p-4 mb-4" style={{ background: '#1A3328', border: '1px solid #1F3D2F' }}>
+            <Card className="p-4 mb-4" style={{ background: '#2A2A46', border: '1px solid #32324A' }}>
             <p className="text-[13px] text-foreground/80 leading-relaxed">{getInsight()}</p>
           </Card>
 

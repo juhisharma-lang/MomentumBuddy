@@ -17,6 +17,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { activeMilestone: goal, milestones, setActiveMilestoneId, activeLogs: logs, activeCommitments: commitments, activePauses: pauses, feedback, addFeedback } = useApp();
   const [showMilestoneMenu, setShowMilestoneMenu] = useState(false);
+  const [showResumeIntent, setShowResumeIntent] = useState(false);
+  const [resumedLater, setResumedLater] = useState(false);
 
   if (!goal) { navigate('/onboarding'); return null; }
 
@@ -119,12 +121,10 @@ export default function Dashboard() {
   const daysLeft = goal.deadline ? differenceInDays(parseISO(goal.deadline), today) : null;
   const todayLogged = logs.some(l => l.date === todayStr);
 
-  // Fire deadline nudge if deadline is today or passed and user hasn't logged today
   if (daysLeft !== null && daysLeft <= 0 && !todayLogged) {
     queueDeadlineNudge(goal, todayStr);
   }
 
-  // Pre-compute strings with apostrophes
   const recoveryMsg = (() => {
     if (isPersonalBest) return `You bounced back in ${latestRecovery} ${latestRecovery === 1 ? 'day' : 'days'} last time — your best yet.`;
     if (trend === 'improving') return 'Your recent recoveries are getting faster. Keep that momentum.';
@@ -135,10 +135,6 @@ export default function Dashboard() {
   const todayDoneLog = logs.find(l => l.date === todayStr);
   const todayLoggedMsg = todayDoneLog?.completed ? 'Session logged. See you tomorrow.' : 'Miss logged. Check in again tomorrow.';
 
-  // Multiple milestones — always show switcher so user can add more
-  const otherMilestones = milestones.filter(m => m.id !== goal.id && m.status === 'active');
-
-  // Are all pattern cards unlocked?
   const patternsUnlocked = longestGap !== null && mostFragileDay !== null && personalBest !== null;
 
   return (
@@ -150,7 +146,6 @@ export default function Dashboard() {
           <div className="mb-6">
             <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-[0.1em] font-light">Milestone</p>
 
-            {/* Milestone name — always tappable to switch or add */}
             <div className="relative">
               <button
                 onClick={() => setShowMilestoneMenu(v => !v)}
@@ -164,6 +159,7 @@ export default function Dashboard() {
               </button>
               {showMilestoneMenu && (
                 <div className="absolute top-full left-0 mt-1 w-full min-w-[220px] bg-card border border-border rounded-xl shadow-lg z-10 overflow-hidden">
+                  {/* Milestone switcher */}
                   {milestones.filter(m => m.status === 'active').map(m => (
                     <button
                       key={m.id}
@@ -179,6 +175,14 @@ export default function Dashboard() {
                       )}
                     </button>
                   ))}
+                  {/* Edit this milestone */}
+                  <button
+                    onClick={() => { navigate('/onboarding?edit=1'); setShowMilestoneMenu(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-foreground border-t border-border hover:bg-muted flex items-center gap-2"
+                  >
+                    <span className="text-sm leading-none">✎</span> Edit this milestone
+                  </button>
+                  {/* Add new milestone */}
                   <button
                     onClick={() => { navigate('/onboarding?new=1'); setShowMilestoneMenu(false); }}
                     className="w-full text-left px-4 py-3 text-sm text-primary border-t border-border hover:bg-muted flex items-center gap-2"
@@ -228,15 +232,47 @@ export default function Dashboard() {
           )}
 
           {dashState === 'D' && activePause && (
-            <div className="flex items-start gap-3 bg-muted border border-border rounded-xl p-4 mb-6">
-              <PauseCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="text-[15px] font-semibold text-foreground" style={{fontFamily:"'Playfair Display',serif"}}>Check-ins paused.</p>
-                <p className="text-[14px] text-foreground/70">Resuming {format(parseISO(activePause.pausedUntil), 'EEEE, MMMM d')}</p>
+            <div className="bg-muted border border-border rounded-xl p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <PauseCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[15px] font-semibold text-foreground" style={{fontFamily:"'Playfair Display',serif"}}>Check-ins paused.</p>
+                  <p className="text-[14px] text-foreground/70">Resuming {format(parseISO(activePause.pausedUntil), 'EEEE, MMMM d')}</p>
+                </div>
               </div>
-              <button onClick={() => navigate('/checkin')} className="text-xs text-primary underline-offset-2 hover:underline shrink-0">
-                Resume early
-              </button>
+              {resumedLater ? (
+                <p className="mt-3 text-[13px] text-foreground/70">
+                  Got it — we will nudge you before your usual check-in time today.
+                </p>
+              ) : !showResumeIntent ? (
+                <button
+                  onClick={() => setShowResumeIntent(true)}
+                  className="mt-3 text-xs text-primary underline-offset-2 hover:underline"
+                >
+                  I'm back sooner
+                </button>
+              ) : (
+                <div className="mt-3 flex flex-col gap-2">
+                  <p className="text-[13px] text-foreground/70">Did you already get your session in today?</p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 rounded-xl"
+                      onClick={() => { setShowResumeIntent(false); navigate('/checkin'); }}
+                    >
+                      Yes — log it now
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 rounded-xl"
+                      onClick={() => { setShowResumeIntent(false); setResumedLater(true); }}
+                    >
+                      Not yet — nudge me later
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -311,8 +347,6 @@ export default function Dashboard() {
 
           {/* ── Pattern Cards ── */}
           <div className="grid grid-cols-3 gap-3 mb-5">
-
-            {/* Longest Gap */}
             <Card className="p-3.5">
               <p className="text-[10px] text-muted-foreground uppercase tracking-[0.1em] font-light mb-2.5">Longest gap</p>
               {longestGap !== null ? (
@@ -332,7 +366,6 @@ export default function Dashboard() {
               )}
             </Card>
 
-            {/* Fragile Day */}
             <Card className="p-3.5">
               <p className="text-[10px] text-muted-foreground uppercase tracking-[0.1em] font-light mb-2.5">Fragile day</p>
               {mostFragileDay !== null ? (
@@ -352,7 +385,6 @@ export default function Dashboard() {
               )}
             </Card>
 
-            {/* Fastest Back */}
             <Card className="p-3.5">
               <p className="text-[10px] text-muted-foreground uppercase tracking-[0.1em] font-light mb-2.5">Fastest back</p>
               {personalBest !== null ? (
@@ -386,7 +418,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ── Weekly Strip (with inline stats) ── */}
+          {/* ── Weekly Strip ── */}
           <Card className="p-5 mb-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[10px] text-muted-foreground uppercase tracking-[0.1em] font-light">This week</h2>
@@ -486,14 +518,11 @@ export default function Dashboard() {
             <Button variant="outline" className="flex-1 rounded-xl" size="sm" onClick={() => navigate('/settings')}>
               <PauseCircle className="w-3.5 h-3.5 mr-1.5" /> Pause
             </Button>
-            <Button variant="ghost" className="flex-1 rounded-xl text-muted-foreground" size="sm" onClick={() => navigate('/settings')}>
-              Edit
-            </Button>
           </div>
           <PoweredByFooter />
         </div>
       </div>
-<DemoNudgeButton />
+      <DemoNudgeButton />
     </div>
   );
 }
