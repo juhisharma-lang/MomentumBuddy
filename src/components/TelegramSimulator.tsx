@@ -8,70 +8,76 @@ type Message = {
   accent?: 'green' | 'terra' | 'purple';
 };
 
-const SCRIPTS: Record<string, Message[]> = {
-  home: [],
-  setup: [
+const SCRIPTS: Record<string, { time: string, messages: Message[] }> = {
+  home: { time: '9:00 PM', messages: [] },
+  setup: { time: '9:00 PM', messages: [
     { id: 1, from: 'bot', text: 'Welcome to Momentum Buddy.\n\nAI PM Certification - check-in at 9 PM.\n\nI will reach out tonight. Reply done when you finish your session.', delay: 600, accent: 'green' },
-  ],
-  A: [
+  ]},
+  A: { time: '9:05 PM', messages: [
     { id: 1, from: 'bot', text: 'It\'s 9 PM — did you get your AI PM Certification session in today?\n\nReply done if yes, or not done if you missed.', delay: 600, accent: 'green' },
     { id: 2, from: 'user', text: 'done', delay: 2200 },
     { id: 3, from: 'bot', text: 'Logged ✓  See you tomorrow.', delay: 900, accent: 'green' },
-  ],
-  A_night_owl: [
+  ]},
+  A_night_owl: { time: '1:30 AM', messages: [
     { id: 1, from: 'bot', text: 'It\'s 9 PM — did you get your AI PM Certification session in today?\n\nReply done if yes, or not done if you missed.', delay: 600, accent: 'green' },
-  ],
-  A_notdone: [
+  ]},
+  A_notdone: { time: '9:02 PM', messages: [
     { id: 1, from: 'bot', text: 'It\'s 9 PM — did you get your AI PM Certification session in today?\n\nReply done if yes, or not done if you missed.', delay: 600, accent: 'green' },
     { id: 2, from: 'user', text: 'not done', delay: 2200 },
     { id: 3, from: 'bot', text: 'No worries — these things happen.\n\nWhen are you coming back? Reply with a time.\n\ne.g. tomorrow 9pm', delay: 900, accent: 'terra' },
     { id: 4, from: 'user', text: 'tomorrow 9pm', delay: 2400 },
     { id: 5, from: 'bot', text: 'Locked in. I will check in tomorrow at 8:30 PM.\n\nYou\'ve got this.', delay: 800, accent: 'terra' },
-  ],
-  B: [
+  ]},
+  B: { time: '9:00 AM', messages: [
     { id: 1, from: 'bot', text: 'You missed yesterday\'s session and haven\'t planned a restart yet.\n\nWhen are you coming back? Reply with a time.\n\ne.g. tomorrow 9pm', delay: 600, accent: 'terra' },
     { id: 2, from: 'user', text: 'tomorrow 9pm', delay: 2800 },
     { id: 3, from: 'bot', text: 'Locked in. I will check in tomorrow at 8:30 PM.\n\nYou\'ve got this.', delay: 900, accent: 'terra' },
-  ],
-  B_double_miss: [
+  ]},
+  B_double_miss: { time: '8:45 PM', messages: [
     { id: 1, from: 'bot', text: 'You missed your planned restart time yesterday.\n\nAre you ready to come back today, or do you want to pause?', delay: 600, accent: 'terra' },
-  ],
-  C: [
+    { id: 2, from: 'user', text: 'pause', delay: 2800 },
+    { id: 3, from: 'bot', text: 'Got it. Taking a breather is better than burning out.\n\nHow many days do you need?', delay: 1000, accent: 'purple' },
+    { id: 4, from: 'user', text: '3 days', delay: 2400 },
+    { id: 5, from: 'bot', text: 'Done. Check-ins paused for 3 days.\n\nMessage "I\'m back" whenever you are ready.', delay: 800, accent: 'purple' },
+  ]},
+  C: { time: '8:35 PM', messages: [
     { id: 1, from: 'bot', text: 'You committed to restarting tonight at 9 PM — that\'s 30 minutes away.\n\nReady?', delay: 600, accent: 'green' },
-    { id: 2, from: 'user', text: 'yes', delay: 1800 },
-    { id: 3, from: 'bot', text: 'I will check back at 9 PM. You\'ve got this.', delay: 800, accent: 'green' },
-  ],
-  D_set: [
+    { id: 2, from: 'user', text: 'not ready', delay: 2200 },
+    { id: 3, from: 'bot', text: 'Okay, no pressure.\n\nYou can reply with "pause" here to take a break, or set a pause on the web dashboard.', delay: 1000, accent: 'terra' },
+  ]},
+  D_set: { time: '8:00 AM', messages: [
     { id: 1, from: 'bot', text: 'Check-ins paused until Sunday.\n\nIf you are back sooner, just message me "I\'m back" and I will pick up from there.', delay: 600, accent: 'purple' },
-  ],
-  D: [
+  ]},
+  D: { time: '9:00 AM', messages: [
     { id: 1, from: 'bot', text: 'Your pause ended today. Welcome back — no pressure.\n\nReady to restart? Reply yes and I will check in tonight at your usual time.', delay: 600, accent: 'purple' },
     { id: 2, from: 'user', text: 'yes', delay: 2400 },
     { id: 3, from: 'bot', text: 'Back in. See you tonight at 9 PM.', delay: 800, accent: 'purple' },
-  ],
-  D_limbo: [
+  ]},
+  D_limbo: { time: '2:00 PM', messages: [
     { id: 1, from: 'bot', text: 'Your pause runs until Sunday.\n\nStill paused - I will reach out when it ends.', delay: 600, accent: 'purple' },
     { id: 2, from: 'user', text: 'I\'m back', delay: 2400 },
     { id: 3, from: 'bot', text: 'Back sooner! Did you already get your session in today?', delay: 800, accent: 'purple' },
-  ],
-  D_early: [
+    { id: 4, from: 'bot', text: 'Reply "done" if yes, or "later" if you want a nudge tonight.', delay: 1200, accent: 'purple' },
+  ]},
+  D_early: { time: '2:05 PM', messages: [
     { id: 1, from: 'bot', text: 'Your pause runs until Sunday.\n\nStill paused - I will reach out when it ends.', delay: 600, accent: 'purple' },
     { id: 2, from: 'user', text: 'I\'m back', delay: 2400 },
-    { id: 3, from: 'bot', text: 'Back sooner - did you already get your session in today?', delay: 800, accent: 'purple' },
-    { id: 4, from: 'user', text: 'not yet', delay: 1800 },
-    { id: 5, from: 'bot', text: 'Got it - I will check in with you tonight at your usual time.', delay: 800, accent: 'purple' },
-  ],
-  E_SOS: [
+    { id: 3, from: 'bot', text: 'Back sooner! Did you already get your session in today?', delay: 800, accent: 'purple' },
+    { id: 4, from: 'bot', text: 'Reply "done" if yes, or "later" if you want a nudge tonight.', delay: 1200, accent: 'purple' },
+    { id: 5, from: 'user', text: 'later', delay: 2000 },
+    { id: 6, from: 'bot', text: 'Got it - I will check in with you tonight at your usual time.', delay: 800, accent: 'purple' },
+  ]},
+  E_SOS: { time: '--:--', messages: [
     { id: 1, from: 'bot', text: '⚠️ Delivery failed. The bot has been blocked or the chat was deleted.', delay: 0, accent: 'terra' }
-  ],
-  multi: [
+  ]},
+  multi: { time: '9:00 PM', messages: [
     { id: 1, from: 'bot', text: 'Portfolio project — it\'s 7 PM.\n\nDid you get your session in? Reply done.', delay: 600, accent: 'green' },
     { id: 2, from: 'user', text: 'done', delay: 2000 },
     { id: 3, from: 'bot', text: 'Logged ✓', delay: 700, accent: 'green' },
     { id: 4, from: 'bot', text: 'AI PM Certification — it\'s 9 PM.\n\nDid you get your session in? Reply done.', delay: 1400, accent: 'purple' },
     { id: 5, from: 'user', text: 'done both', delay: 2200 },
     { id: 6, from: 'bot', text: 'Both logged ✓  Solid day.', delay: 800, accent: 'green' },
-  ],
+  ]},
 };
 
 const ACCENT_COLOR = { green: '#5EC47A', terra: '#FF7B6B', purple: '#7A6E9B' };
@@ -79,7 +85,10 @@ const ACCENT_COLOR = { green: '#5EC47A', terra: '#FF7B6B', purple: '#7A6E9B' };
 export default function TelegramSimulator({ stateKey }: { stateKey: string }) {
   // D state shows the "pause set" message (with I'm back tip), not the expiry message
   const scriptKey = stateKey === 'D' ? 'D_set' : stateKey;
-  const script = SCRIPTS[scriptKey] ?? SCRIPTS['A'];
+  const data = SCRIPTS[scriptKey] ?? SCRIPTS['A'];
+  const script = data.messages;
+  const clockTime = data.time;
+  
   const isEmpty = script.length === 0;
   const [visibleCount, setVisibleCount] = useState(0);
   const [replaying, setReplaying] = useState(false);
@@ -122,7 +131,7 @@ export default function TelegramSimulator({ stateKey }: { stateKey: string }) {
       </div>
       <div style={{ background: '#1A1A2E', border: '0.5px solid #32324A', borderRadius: '24px', overflow: 'hidden' }}>
         <div style={{ padding: '8px 14px 2px', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '8px', color: '#5A5A7A' }}>9:00 PM</span>
+          <span style={{ fontSize: '8px', color: '#5A5A7A' }}>{clockTime}</span>
           <span style={{ fontSize: '8px', color: '#5A5A7A' }}>●●●</span>
         </div>
         <div style={{ background: '#22223A', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '0.5px solid #32324A' }}>
