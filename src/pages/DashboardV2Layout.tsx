@@ -369,23 +369,24 @@ function ScreenSetup({ onNavigate }: { onNavigate: (key: string) => void }) {
 }
 
 // ── Recovery hero card ────────────────────────────────────────────────────────
-function RecoveryCard({ avg, best, trend, note }: { avg: string; best: number; trend: string; note: string }) {
+function RecoveryCard({ avg, best, trend, note, bars = [2, 1, 1, 1, 1] }: { avg: string; best: number; trend: string; note: string; bars?: number[] }) {
+  const maxBar = Math.max(3, ...bars);
   return (
     <div style={{ background: '#22223A', border: '0.5px solid #32324A', borderRadius: '8px', padding: '8px 10px', marginBottom: '8px' }}>
       <div style={{ fontSize: '8px', color: '#9898BA', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>Recovery speed</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginBottom: '3px' }}>
-        <span style={{ fontSize: '28px', fontWeight: 500, color: trend === 'improving' ? '#5EC47A' : '#F0ECE8', lineHeight: 1 }}>{avg}</span>
+        <span style={{ fontSize: '28px', fontWeight: 500, color: trend === 'improving' ? '#5EC47A' : trend === 'worsening' ? '#FF7B6B' : '#F0ECE8', lineHeight: 1 }}>{avg}</span>
         <span style={{ fontSize: '9px', color: '#9898BA' }}>avg days to bounce back</span>
       </div>
       <div style={{ fontSize: '9px', color: '#9898BA', lineHeight: 1.5, marginBottom: '8px' }}>{note}</div>
       <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', height: '24px', marginBottom: '3px' }}>
-        {[2, 1.5, 1.8, 1, 1.2].map((v, i) => (
-          <div key={i} style={{ flex: 1, background: i === 4 ? '#5EC47A' : '#32324A', borderRadius: '2px', height: `${(v / 2.2) * 100}%` }} />
+        {bars.map((v, i) => (
+          <div key={i} style={{ flex: 1, background: i === bars.length - 1 ? (trend === 'worsening' ? '#FF7B6B' : '#5EC47A') : '#32324A', borderRadius: '2px', height: `${(v / maxBar) * 100}%` }} />
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '7px', color: '#5A5A7A' }}>Oldest (days)</span>
-        <span style={{ fontSize: '7px', color: '#5EC47A' }}>5 misses tracked</span>
+        <span style={{ fontSize: '7px', color: '#5A5A7A' }}>{bars.length} misses tracked</span>
         <span style={{ fontSize: '7px', color: '#5A5A7A' }}>Most recent</span>
       </div>
     </div>
@@ -498,7 +499,7 @@ function DashboardChrome({ children, isPaused }: { children: React.ReactNode; is
             {summaryTab === 'weekly' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
-                  {[{ n: '5', l: 'sessions this week' },{ n: '1', l: 'miss' },{ n: '1.2', l: 'avg recovery' }].map(s => (
+                  {[{ n: '5', l: 'sessions this week' },{ n: '1', l: 'miss' },{ n: '1', l: 'avg recovery' }].map(s => (
                     <div key={s.l} style={{ background: '#22223A', border: '0.5px solid #32324A', borderRadius: '8px', padding: '8px' }}>
                       <div style={{ fontSize: '16px', fontWeight: 500, color: '#F0ECE8' }}>{s.n}</div>
                       <div style={{ fontSize: '8px', color: '#9898BA' }}>{s.l}</div>
@@ -520,7 +521,7 @@ function DashboardChrome({ children, isPaused }: { children: React.ReactNode; is
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
-                  {[{ n: '19', l: 'sessions this month' },{ n: '3', l: 'misses' },{ n: '1.3', l: 'avg recovery' }].map(s => (
+                  {[{ n: '19', l: 'sessions this month' },{ n: '3', l: 'misses' },{ n: '1', l: 'avg recovery' }].map(s => (
                     <div key={s.l} style={{ background: '#22223A', border: '0.5px solid #32324A', borderRadius: '8px', padding: '8px' }}>
                       <div style={{ fontSize: '16px', fontWeight: 500, color: '#F0ECE8' }}>{s.n}</div>
                       <div style={{ fontSize: '8px', color: '#9898BA' }}>{s.l}</div>
@@ -558,7 +559,7 @@ function ScreenA() {
       <WeekGrid pattern={['done','done','done','miss','done','fut','fut']} />
       {hasData ? (
         <>
-          <RecoveryCard avg="1.2" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
+          <RecoveryCard avg="1" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
           <PatternCards gap={3} fragile="Wed" best={1} />
           <Stats items={[{ num: 12, label: 'sessions logged' }]} />
         </>
@@ -588,7 +589,7 @@ function ScreenANotDone() {
         <CardBody>You replied "not done" tonight and committed to coming back tomorrow at 9 PM. Nothing to do right now.</CardBody>
       </Card>
       <WeekGrid pattern={['done','done','done','miss','miss','fut','fut']} />
-      <RecoveryCard avg="1.2" best={1} trend="neutral" note="Recovery clock starts now. Last time you were back in 1 day." />
+      <RecoveryCard avg="1" best={1} trend="neutral" note="Recovery clock starts now. Last time you were back in 1 day." />
       <PatternCards gap={3} fragile="Wed" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
@@ -610,7 +611,7 @@ function ScreenB() {
         </a>
       </Card>
       <WeekGrid pattern={['done','done','done','miss','today','fut','fut']} />
-      <RecoveryCard avg="1.4" best={1} trend="neutral" note="Average time to bounce back after a miss. Your best is 1 day." />
+      <RecoveryCard avg="2" best={1} trend="neutral" note="Average time to bounce back after a miss. Your best is 1 day." />
       <PatternCards gap={3} fragile="Wed" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
@@ -628,7 +629,7 @@ function ScreenC() {
         <CardTitle>30 min until your session</CardTitle>
         <CardBody>We will check in on Telegram at 9 PM. Nothing to do right now.</CardBody>
       </Card>
-      <RecoveryCard avg="1.4" best={1} trend="neutral" note="You committed to coming back tonight. Recovery clock starts now." />
+      <RecoveryCard avg="2" best={1} trend="neutral" note="You committed to coming back tonight. Recovery clock starts now." />
       <PatternCards gap={3} fragile="Wed" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
@@ -656,7 +657,7 @@ function ScreenD({ onEarlyResume }: { onEarlyResume: () => void }) {
         </div>
       )}
       {intent === 'later' && <div style={{ fontSize: '9px', color: '#9898BA', lineHeight: '1.5', padding: '8px 0', marginBottom: '10px' }}>Got it - we will nudge you before your usual check-in time today.</div>}
-      <RecoveryCard avg="1.2" best={1} trend="neutral" note="Your history while you rest. Recovery tracking resumes when you return." />
+      <RecoveryCard avg="1" best={1} trend="neutral" note="Your history while you rest. Recovery tracking resumes when you return." />
       <PatternCards gap={3} fragile="Wed" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
@@ -674,7 +675,7 @@ function ScreenDEarly() {
         <CardTitle>Pause lifted</CardTitle>
         <CardBody>Check-ins resume from today. We will nudge you at your usual time tonight.</CardBody>
       </Card>
-      <RecoveryCard avg="1.2" best={1} trend="improving" note="Back early - that is a good sign. Your avg recovery is improving." />
+      <RecoveryCard avg="1" best={1} trend="improving" note="Back early - that is a good sign. Your avg recovery is improving." />
       <PatternCards gap={4} fragile="Mon" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
@@ -699,7 +700,7 @@ function ScreenMulti() {
         <CardTitle>Across both milestones</CardTitle>
         <CardBody>23 sessions - avg recovery 1.1 days - best streak 8</CardBody>
       </Card>
-      <RecoveryCard avg="1.1" best={1} trend="improving" note="Across both milestones. Best streak is 8 days." />
+      <RecoveryCard avg="1" best={1} trend="improving" note="Across both milestones. Best streak is 8 days." />
       <PatternCards gap={2} fragile="Fri" best={1} />
       <Stats items={[{ num: 23, label: 'sessions logged' }]} />
     </div>
@@ -719,7 +720,7 @@ function ScreenNightOwl() {
         <CardBody>We won't count yesterday as a miss yet. Reply "done" to your notification before you go to sleep to secure the win.</CardBody>
       </Card>
       <WeekGrid pattern={['done','done','done','miss','today','fut','fut']} />
-      <RecoveryCard avg="1.2" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
+      <RecoveryCard avg="1" best={1} trend="improving" note="Your recent recoveries are getting faster. Personal best is 1 day." />
       <PatternCards gap={3} fragile="Wed" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
@@ -741,7 +742,7 @@ function ScreenDoubleMiss() {
         </a>
       </Card>
       <WeekGrid pattern={['done','done','done','miss','miss','today','fut']} />
-      <RecoveryCard avg="1.4" best={1} trend="worsening" note="This is a double miss. A planned pause helps protect your momentum data." />
+      <RecoveryCard avg="2" best={1} trend="worsening" note="This is a double miss. A planned pause helps protect your momentum data." bars={[2, 1, 1, 1, 2]} />
       <PatternCards gap={3} fragile="Wed" best={1} />
       <Stats items={[{ num: 11, label: 'sessions logged' }]} />
     </DashboardChrome>
