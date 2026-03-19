@@ -381,7 +381,9 @@ function RecoveryCard({ avg, best, trend, note, bars = [2, 1, 1, 1, 1] }: { avg:
       <div style={{ fontSize: '9px', color: '#9898BA', lineHeight: 1.5, marginBottom: '8px' }}>{note}</div>
       <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', height: '24px', marginBottom: '3px' }}>
         {bars.map((v, i) => (
-          <div key={i} style={{ flex: 1, background: i === bars.length - 1 ? (trend === 'worsening' ? '#FF7B6B' : '#5EC47A') : '#32324A', borderRadius: '2px', height: `${(v / maxBar) * 100}%` }} />
+          <div key={i} title={`${v} ${v === 1 ? 'day' : 'days'}`} style={{ flex: 1, background: i === bars.length - 1 ? (trend === 'worsening' ? '#FF7B6B' : '#5EC47A') : '#32324A', borderRadius: '2px', height: `${(v / maxBar) * 100}%`, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '2px' }}>
+            <span style={{ fontSize: '7px', fontWeight: 600, color: i === bars.length - 1 ? '#1A1A2E' : '#9898BA' }}>{v}</span>
+          </div>
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
