@@ -17,7 +17,9 @@ import DevModeBar, { useDevMode } from "@/components/DevModeBar";
 import DashboardV2Layout from './pages/DashboardV2Layout';
 import OnboardingV2 from "./pages/OnboardingV2";
 import { Navigate } from 'react-router-dom';
-
+import OnboardingV3 from "./pages/OnboardingV3";
+import DashboardV3 from "./pages/DashboardV3";
+import HeroScreen from "./pages/HeroScreen";
 
 const queryClient = new QueryClient();
 
@@ -28,15 +30,19 @@ const AppInner = () => {
       <DevModeBar />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/welcome" element={<HeroScreen />} />        
         <Route path="/onboarding" element={devMode === 'newui' ? <OnboardingV2 /> : <Onboarding />} />
-<Route path="/dashboard" element={devMode === 'newui' ? <DashboardV2Layout /> : <Dashboard />} />
+        <Route path="/dashboard" element={devMode === 'newui' ? <DashboardV2Layout /> : <Dashboard />} />
         <Route path="/checkin" element={<CheckIn />} />
         <Route path="/weekly" element={<WeeklySummary />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/complete" element={<MilestoneComplete />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/onboarding" element={devMode === 'newui' ? <Navigate to="/dashboard" replace /> : <Onboarding />} />
-<Route path="/dashboard" element={devMode === 'newui' ? <DashboardV2Layout /> : <Dashboard />} />
+        <Route path="/onboarding-v3" element={<OnboardingV3 />} />
+        <Route path="/dashboard" element={devMode === 'newui' ? <DashboardV2Layout /> : <Dashboard />} />
+        <Route path="/dashboard-v3" element={<DashboardV3 />} />
+        <Route path="/welcome" element={<HeroScreen />} />
       </Routes>
     </BrowserRouter>
   );

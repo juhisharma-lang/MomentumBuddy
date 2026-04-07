@@ -119,13 +119,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── Milestone actions ──────────────────────────────────────────────────────
 
   const addMilestone = (milestone: Milestone) => {
-    setState(prev => {
-      const milestones = [...prev.milestones, milestone];
-      const activeMilestoneId =
-        prev.activeMilestoneId ?? (milestone.status === 'active' ? milestone.id : null);
-      return { ...prev, milestones, activeMilestoneId };
-    });
-  };
+  setState(prev => {
+    const milestones = [...prev.milestones, milestone];
+    const activeMilestoneId =
+      milestone.status === 'active' ? milestone.id : prev.activeMilestoneId;
+    return { ...prev, milestones, activeMilestoneId };
+  });
+};
 
   const updateMilestone = (id: string, updates: Partial<Milestone>) => {
     setState(prev => ({

@@ -24,9 +24,18 @@ export interface Milestone {
   startTime?: string;
   checkinTime?: string;
   channelType?: ChannelType;
-  telegramHandle?: string;
+telegramHandle?: string;
   email?: string;
 
+  // V3 learner journey fields
+  journeyId?: string;
+  studyDays?: string[];
+  notebookOutline?: string;
+  notifReminderTime?: string;
+  notifCheckinTime?: string;
+  notifPermissionGranted?: boolean;
+
+  // Lifecycle timestamps
   // Lifecycle timestamps
   activatedAt?: string;
   completedAt?: string;

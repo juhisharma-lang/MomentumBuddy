@@ -1,0 +1,504 @@
+import { useState, useMemo, useEffect} from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useApp } from '@/contexts/AppContext';
+import { getJourney } from '@/data/journeys';
+import PlantVisual from '@/components/PlantVisual';
+import { CheckCircle2, Circle, X, ArrowRight } from 'lucide-react';
+import { syncScheduleToSW } from '@/lib/notifications';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function today(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getWeekDays(): { label: string; date: string }[] {
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+  return days.map((label, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return { label, date: d.toISOString().split('T')[0] };
+  });
+}
+
+function getDaysLeft(deadline?: string): number | null {
+  if (!deadline) return null;
+  const ms = new Date(deadline).getTime() - new Date(today()).getTime();
+  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+}
+
+function getCurrentWeekNumber(activatedAt?: string): number {
+  if (!activatedAt) return 1;
+  const ms = new Date(today()).getTime() - new Date(activatedAt).getTime();
+  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24 * 7)));
+}
+
+function getPlantState(
+  logs: { date: string; completed: boolean }[],
+  todayStr: string
+): 'growing' | 'wilting' | 'recovered' {
+  const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
+  const recent = sorted.slice(0, 3);
+  const missCount = recent.filter(l => !l.completed).length;
+  if (missCount >= 2) return 'wilting';
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yStr = yesterday.toISOString().split('T')[0];
+  const missedYesterday = logs.find(l => l.date === yStr && !l.completed);
+  const doneToday = logs.find(l => l.date === todayStr && l.completed);
+  if (missedYesterday && doneToday) return 'recovered';
+  return 'growing';
+}
+
+function getYesterday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().split('T')[0];
+}
+
+// Avg days to come back after a miss — the north star
+function getAvgRecoveryDays(logs: { date: string; completed: boolean }[]): number | null {
+  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+  const recoveryPoints: number[] = [];
+  const missed = sorted.filter(l => !l.completed);
+  const completed = sorted.filter(l => l.completed);
+  for (const miss of missed) {
+    const next = completed.find(l => l.date > miss.date);
+    if (next) {
+      const ms = new Date(next.date).getTime() - new Date(miss.date).getTime();
+      recoveryPoints.push(Math.round(ms / (1000 * 60 * 60 * 24)));
+    }
+  }
+  if (recoveryPoints.length === 0) return null;
+  return Math.round(recoveryPoints.reduce((a, b) => a + b, 0) / recoveryPoints.length);
+}
+
+// Sessions this week vs planned
+function getWeekSessionStats(
+  logs: { date: string; completed: boolean }[],
+  studyDays: string[],
+  weekDates: { label: string; date: string }[],
+  todayStr: string
+): { done: number; planned: number } {
+  const dayNameMap: Record<string, string> = {
+    '0': 'Sun', '1': 'Mon', '2': 'Tue', '3': 'Wed',
+    '4': 'Thu', '5': 'Fri', '6': 'Sat',
+  };
+  const done = weekDates.filter(({ date }) =>
+    logs.find(l => l.date === date && l.completed)
+  ).length;
+  const planned = weekDates.filter(({ date }) => {
+    if (date > todayStr) return false;
+    const dayNum = String(new Date(date).getDay());
+    return studyDays.includes(dayNameMap[dayNum]);
+  }).length;
+  return { done, planned: Math.max(planned, done) };
+}
+
+// Current streak
+function getCurrentStreak(logs: { date: string; completed: boolean }[]): number {
+  const sorted = [...logs]
+    .filter(l => l.completed)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (sorted.length === 0) return 0;
+  let streak = 0;
+  let cursor = new Date(today());
+  for (const log of sorted) {
+    const cursorStr = cursor.toISOString().split('T')[0];
+    if (log.date === cursorStr) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+// ── Day pill ──────────────────────────────────────────────────────────────────
+
+function DayPill({ label, date, todayStr, logs }: {
+  label: string;
+  date: string;
+  todayStr: string;
+  logs: { date: string; completed: boolean }[];
+}) {
+  const log = logs.find(l => l.date === date);
+  const isFuture = date > todayStr;
+  const isToday = date === todayStr;
+
+  let bg = 'bg-surface-container text-on-surface-variant';
+  if (isToday && !log?.completed) bg = 'bg-[#a63c2a] text-white';
+  else if (log?.completed) bg = 'bg-[#4ade80]/20 text-[#16a34a] ring-1 ring-[#16a34a]/30';
+  else if (log && !log.completed) bg = 'bg-red-100 text-red-500';
+  else if (isFuture) bg = 'bg-surface-container text-on-surface-variant opacity-40';
+
+  return (
+    <div className={`flex-1 h-9 rounded-bento flex items-center justify-center text-xs font-bold transition-all ${bg}`}>
+      {label}
+    </div>
+  );
+}
+
+// ── Metric card ───────────────────────────────────────────────────────────────
+
+function MetricCard({ value, label, sub, highlight }: {
+  value: string;
+  label: string;
+  sub?: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div className={`flex-1 rounded-bento p-3 text-center ${highlight ? 'bg-[#a63c2a]/8 border border-[#a63c2a]/20' : 'bg-surface-container'}`}>
+      <p className={`text-xl font-black leading-none mb-0.5 ${highlight ? 'text-[#a63c2a]' : 'text-on-surface'}`}>
+        {value}
+      </p>
+      <p className="text-[10px] font-bold text-on-surface-variant leading-tight">{label}</p>
+      {sub && <p className="text-[9px] text-on-surface-variant mt-0.5 opacity-70">{sub}</p>}
+    </div>
+  );
+}
+
+// ── Goal item ─────────────────────────────────────────────────────────────────
+
+function GoalItem({ title, done, onToggle }: {
+  title: string; done: boolean; onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="flex items-start gap-3 w-full text-left py-2.5 border-b border-outline-variant/20 last:border-0 active:opacity-70 transition-opacity"
+    >
+      {done
+        ? <CheckCircle2 className="w-5 h-5 text-[#16a34a] flex-shrink-0 mt-0.5" />
+        : <Circle className="w-5 h-5 text-outline-variant flex-shrink-0 mt-0.5" />
+      }
+      <span className={`text-sm leading-snug ${done ? 'text-on-surface-variant line-through' : 'text-on-surface font-medium'}`}>
+        {title}
+      </span>
+    </button>
+  );
+}
+
+// ── Recovery bottom sheet ─────────────────────────────────────────────────────
+
+function RecoverySheet({ missedTopic, smallestStep, onLogNow, onDismiss }: {
+  missedTopic: string;
+  smallestStep: string;
+  onLogNow: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onDismiss} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-m3-bg rounded-t-[2rem] px-5 pt-5 pb-8 font-jakarta shadow-[0_-20px_60px_rgba(0,0,0,0.15)]">
+        <div className="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-5" />
+        <button
+          onClick={onDismiss}
+          className="absolute top-5 right-5 w-8 h-8 bg-surface-container rounded-full flex items-center justify-center"
+        >
+          <X className="w-4 h-4 text-on-surface-variant" />
+        </button>
+
+        <div className="flex justify-center mb-4">
+          <PlantVisual state="wilting" className="w-20 h-20" />
+        </div>
+
+        <h2 className="text-xl font-black text-on-surface mb-1">You missed yesterday.</h2>
+        <p className="text-sm text-on-surface-variant mb-5">
+          No guilt. Your plant bounces back when you do.
+        </p>
+
+        <div className="bg-surface-container rounded-bento p-4 mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">
+            What you missed
+          </p>
+          <p className="text-sm font-bold text-on-surface">{missedTopic}</p>
+        </div>
+
+        <div className="bg-[#ffac9d]/20 border border-[#a63c2a]/20 rounded-bento p-4 mb-5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#a63c2a] mb-1">
+            Smallest step right now
+          </p>
+          <p className="text-sm font-bold text-on-surface">{smallestStep}</p>
+          <p className="text-xs text-on-surface-variant mt-1">~10 minutes</p>
+        </div>
+
+        <button
+          onClick={onLogNow}
+          className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2 mb-3"
+        >
+          I'm starting now
+          <ArrowRight className="w-5 h-5" />
+        </button>
+        <button
+          onClick={onDismiss}
+          className="w-full py-3 rounded-full border border-outline-variant text-on-surface-variant font-bold text-sm"
+        >
+          I'll do it later today
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
+
+export default function DashboardV3() {
+  const navigate = useNavigate();
+  const { activeMilestone, activeLogs } = useApp();
+  const todayStr = today();
+  const yesterdayStr = getYesterday();
+  const weekDays = getWeekDays();
+
+  useEffect(() => {
+  if (!activeMilestone) return;
+  syncScheduleToSW({
+    reminderTime: activeMilestone.notifReminderTime ?? '07:00 PM',
+    checkinTime: activeMilestone.notifCheckinTime ?? '09:00 PM',
+    studyDays: activeMilestone.studyDays ?? ['Mon','Tue','Wed','Thu','Fri'],
+    todayLogged: !!activeLogs.find(l => l.date === todayStr && l.completed),
+    missedYesterday: !!activeLogs.find(l => l.date === yesterdayStr && !l.completed),
+  });
+}, [activeMilestone, activeLogs]);
+
+  const [completedGoals, setCompletedGoals] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('v3_completed_goals');
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const [showRecovery, setShowRecovery] = useState(false);
+
+  // addLog via context
+  const { addLog } = useApp();
+
+  function toggleGoal(goalKey: string) {
+    setCompletedGoals(prev => {
+      const next = new Set(prev);
+      if (next.has(goalKey)) next.delete(goalKey);
+      else next.add(goalKey);
+      localStorage.setItem('v3_completed_goals', JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  const journey = activeMilestone?.journeyId
+    ? getJourney(activeMilestone.journeyId)
+    : null;
+
+  const weekNumber = getCurrentWeekNumber(activeMilestone?.activatedAt);
+  const daysLeft = getDaysLeft(activeMilestone?.deadline);
+  const plantState = getPlantState(activeLogs, todayStr);
+  const todayLogged = activeLogs.find(l => l.date === todayStr);
+  const missedYesterday = activeLogs.find(l => l.date === yesterdayStr && !l.completed);
+  const showMissBanner = !!missedYesterday && !todayLogged?.completed;
+
+  // Metrics
+  const avgRecovery = getAvgRecoveryDays(activeLogs);
+  const studyDays = activeMilestone?.studyDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const { done: weekDone, planned: weekPlanned } = getWeekSessionStats(activeLogs, studyDays, weekDays, todayStr);
+  const streak = getCurrentStreak(activeLogs);
+
+  const currentWeek = useMemo(() => {
+    if (!journey) return null;
+    const idx = Math.min(weekNumber - 1, journey.weeks.length - 1);
+    return journey.weeks[idx] ?? journey.weeks[0];
+  }, [journey, weekNumber]);
+
+  const doneCount = currentWeek?.goals.filter((_, i) =>
+    completedGoals.has(`${weekNumber}-${i}`)
+  ).length ?? 0;
+
+  const missedTopicIndex = currentWeek?.goals.findIndex((_, i) =>
+    !completedGoals.has(`${weekNumber}-${i}`)
+  ) ?? 0;
+  const missedTopic = currentWeek?.goals[missedTopicIndex >= 0 ? missedTopicIndex : 0] ?? 'Your next topic';
+  const smallestStep = `Start with just the first part of: ${missedTopic}`;
+
+  function handleLogSession() {
+    addLog({ date: todayStr, completed: true, fallbackTriggered: false });
+    setShowRecovery(false);
+  }
+
+  if (!activeMilestone) {
+    return (
+      <div className="h-screen bg-m3-bg font-jakarta flex flex-col items-center justify-center px-6 text-center">
+        <h2 className="text-xl font-black text-[#a63c2a] mb-2">No journey started yet</h2>
+        <p className="text-on-surface-variant text-sm mb-6">Set up your learning plan to get started.</p>
+        <button
+          onClick={() => navigate('/welcome')}
+          className="bg-[#a63c2a] text-white rounded-full px-8 py-3 font-bold text-sm"
+        >
+          Start a journey
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen bg-m3-bg font-jakarta flex flex-col overflow-hidden">
+
+      {/* Header — no settings, no dropdown */}
+      <header className="flex-shrink-0 flex justify-between items-center px-5 pt-5 pb-2">
+        <div>
+          <h1 className="text-base font-black text-on-surface leading-tight">
+            {journey?.name ?? activeMilestone.goalTitle}
+          </h1>
+          <p className="text-[11px] text-on-surface-variant mt-0.5">
+            Week {weekNumber}
+            {daysLeft !== null && ` · ${daysLeft} days left`}
+          </p>
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-4 pb-4">
+
+        {/* Plant */}
+        <div className="flex flex-col items-center py-4">
+          <PlantVisual state={plantState} className="w-28 h-28" />
+          <p className="text-xs font-bold text-on-surface-variant mt-2">
+            {plantState === 'growing' && 'Growing steadily'}
+            {plantState === 'wilting' && 'Needs attention — come back today'}
+            {plantState === 'recovered' && 'Coming back — keep going'}
+          </p>
+        </div>
+
+        {/* Week strip */}
+        <div className="flex gap-1.5 mb-4">
+          {weekDays.map(({ label, date }) => (
+            <DayPill
+              key={date}
+              label={label}
+              date={date}
+              todayStr={todayStr}
+              logs={activeLogs}
+            />
+          ))}
+        </div>
+
+        {/* Metrics row */}
+        <div className="flex gap-2 mb-4">
+          <MetricCard
+            highlight
+            value={avgRecovery !== null ? `${avgRecovery}d` : '—'}
+            label="Avg recovery"
+            sub={avgRecovery !== null ? 'days to bounce back' : 'No misses yet 🌱'}
+          />
+          <MetricCard
+            value={`${weekDone}/${weekPlanned}`}
+            label="This week"
+            sub="sessions planned"
+          />
+          <MetricCard
+            value={streak > 0 ? `${streak}` : '—'}
+            label="Streak"
+            sub={streak > 0 ? 'days in a row' : 'Start today'}
+          />
+        </div>
+
+        {/* Miss recovery banner */}
+        {showMissBanner && (
+          <button
+            onClick={() => setShowRecovery(true)}
+            className="w-full bg-red-50 border border-red-100 rounded-bento p-4 mb-4 text-left active:opacity-80 transition-opacity"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-red-700 mb-0.5">You missed yesterday.</p>
+                <p className="text-xs text-red-500">Tap to see the smallest step back.</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-red-400 flex-shrink-0" />
+            </div>
+          </button>
+        )}
+
+        {/* Weekly goals */}
+        {currentWeek ? (
+          <section className="bg-surface-container-lowest rounded-bento border border-outline-variant/15 mb-4">
+            <div className="px-4 pt-4 pb-2 border-b border-outline-variant/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    Week {weekNumber}
+                  </p>
+                  <h3 className="text-sm font-black text-on-surface mt-0.5">
+                    {currentWeek.title}
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-full">
+                  {doneCount}/{currentWeek.goals.length}
+                </span>
+              </div>
+              <div className="mt-3 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#a63c2a] rounded-full transition-all duration-500"
+                  style={{ width: `${currentWeek.goals.length > 0 ? (doneCount / currentWeek.goals.length) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+            <div className="px-4 py-1">
+              {currentWeek.goals.map((goal, i) => {
+                const key = `${weekNumber}-${i}`;
+                return (
+                  <GoalItem
+                    key={key}
+                    title={goal}
+                    done={completedGoals.has(key)}
+                    onToggle={() => toggleGoal(key)}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        ) : (
+          <section className="bg-surface-container rounded-bento p-5 mb-4 text-center">
+            <p className="text-sm text-on-surface-variant">
+              Journey template not found.{' '}
+              <button
+                onClick={() => { localStorage.clear(); navigate('/onboarding-v3'); }}
+                className="underline text-[#a63c2a]"
+              >
+                Reset and start fresh
+              </button>
+            </p>
+          </section>
+        )}
+
+      </main>
+
+      {/* Fixed CTA */}
+      <div className="flex-shrink-0 px-4 py-4 bg-m3-bg border-t border-outline-variant/20">
+        {todayLogged?.completed ? (
+          <div className="w-full py-4 rounded-full bg-[#4ade80]/15 border border-[#16a34a]/30 flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-[#16a34a]" />
+            <span className="font-bold text-[#16a34a] text-sm">Session logged for today</span>
+          </div>
+        ) : (
+          <button
+            onClick={handleLogSession}
+            className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform"
+          >
+            Log today's session
+          </button>
+        )}
+      </div>
+
+      {/* Recovery bottom sheet */}
+      {showRecovery && (
+        <RecoverySheet
+          missedTopic={missedTopic}
+          smallestStep={smallestStep}
+          onLogNow={handleLogSession}
+          onDismiss={() => setShowRecovery(false)}
+        />
+      )}
+
+    </div>
+  );
+}

@@ -16,8 +16,30 @@ export default {
       fontFamily: {
         serif: ["Lora", "Georgia", "serif"],
         sans: ["DM Sans", "system-ui", "sans-serif"],
+        jakarta: ["Plus Jakarta Sans", "sans-serif"],
       },
       colors: {
+        // ── V3 Material Design 3 tokens ──────────────────────────────────────
+        "m3-primary":              "#a63c2a",
+        "m3-primary-container":    "#ffac9d",
+        "m3-on-primary":           "#fff7f6",
+        "m3-on-primary-container": "#76190b",
+        "m3-secondary":            "#715d00",
+        "m3-bg":                   "#f7f9fb",
+        "secondary-container":     "#ffe173",
+        "on-secondary-container":  "#625000",
+        "tertiary":                "#5a579e",
+        "tertiary-container":      "#b5b1ff",
+        "on-tertiary-container":   "#312d73",
+        "surface-container-lowest":  "#ffffff",
+        "surface-container-low":     "#f1f4f6",
+        "surface-container":         "#eaeef1",
+        "surface-container-high":    "#e3e9ec",
+        "surface-container-highest": "#dde3e7",
+        "on-surface":              "#2d3337",
+        "on-surface-variant":      "#596063",
+        "outline-variant":         "#acb3b7",
+        // ────────────────────────────────────────────────────────────────────
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -74,6 +96,10 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // V3 bento scale
+        bento:      "1rem",
+        "bento-lg": "2rem",
+        "bento-xl": "3rem",
       },
       keyframes: {
         "accordion-down": {
