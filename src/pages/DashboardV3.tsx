@@ -60,7 +60,6 @@ function getYesterday(): string {
   return d.toISOString().split('T')[0];
 }
 
-// Avg days to come back after a miss — the north star
 function getAvgRecoveryDays(logs: { date: string; completed: boolean }[]): number | null {
   const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
   const recoveryPoints: number[] = [];
@@ -77,7 +76,6 @@ function getAvgRecoveryDays(logs: { date: string; completed: boolean }[]): numbe
   return Math.round(recoveryPoints.reduce((a, b) => a + b, 0) / recoveryPoints.length);
 }
 
-// Sessions this week vs planned
 function getWeekSessionStats(
   logs: { date: string; completed: boolean }[],
   studyDays: string[],
@@ -99,17 +97,57 @@ function getWeekSessionStats(
   return { done, planned: Math.max(planned, done) };
 }
 
-// Current streak
-function getCurrentStreak(logs: { date: string; completed: boolean }[]): number {
-  const sorted = [...logs]
+function getCurrentStreak(
+  logs: { date: string; completed: boolean }[],
+  studyDays: string[]
+): number {
+  const dayNameMap: Record<number, string> = {
+    0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
+  };
+  const completed = [...logs]
     .filter(l => l.completed)
     .sort((a, b) => b.date.localeCompare(a.date));
-  if (sorted.length === 0) return 0;
+  if (completed.length === 0) return 0;
   let streak = 0;
   let cursor = new Date(today());
-  for (const log of sorted) {
-    const cursorStr = cursor.toISOString().split('T')[0];
-    if (log.date === cursorStr) {
+  for (let i = 0; i < 60; i++) {
+    const dateStr = cursor.toISOString().split('T')[0];
+    const dayName = dayNameMap[cursor.getDay()];
+    if (!studyDays.includes(dayName)) {
+      cursor.setDate(cursor.getDate() - 1);
+      continue;
+    }
+    const log = completed.find(l => l.date === dateStr);
+    if (log) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function getMissStreak(
+  logs: { date: string; completed: boolean }[],
+  studyDays: string[],
+  todayStr: string
+): number {
+  const dayNameMap: Record<number, string> = {
+    0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
+  };
+  let streak = 0;
+  let cursor = new Date(todayStr);
+  cursor.setDate(cursor.getDate() - 1); // start from yesterday
+  for (let i = 0; i < 30; i++) {
+    const dateStr = cursor.toISOString().split('T')[0];
+    const dayName = dayNameMap[cursor.getDay()];
+    if (!studyDays.includes(dayName)) {
+      cursor.setDate(cursor.getDate() - 1);
+      continue;
+    }
+    const log = logs.find(l => l.date === dateStr);
+    if (!log || !log.completed) {
       streak++;
       cursor.setDate(cursor.getDate() - 1);
     } else {
@@ -186,12 +224,31 @@ function GoalItem({ title, done, onToggle }: {
 
 // ── Recovery bottom sheet ─────────────────────────────────────────────────────
 
-function RecoverySheet({ missedTopic, smallestStep, onLogNow, onDismiss }: {
+function RecoverySheet({ missedTopic, smallestStep, missStreak, onLogNow, onDismiss }: {
   missedTopic: string;
   smallestStep: string;
+  missStreak: number;
   onLogNow: () => void;
   onDismiss: () => void;
 }) {
+  const isFeedbackMode = missStreak >= 7;
+
+  const title = missStreak >= 7
+    ? "You've been away a week."
+    : missStreak >= 5
+    ? "Your plant is barely hanging on."
+    : missStreak >= 2
+    ? `${missStreak} days missed. Still recoverable.`
+    : "You missed yesterday.";
+
+  const subtitle = missStreak >= 7
+    ? "That's okay. We'd love to know what got in the way."
+    : missStreak >= 5
+    ? "Don't let this become two weeks. 10 minutes is all it takes."
+    : missStreak >= 2
+    ? "Every day you wait makes re-entry harder. Start tiny."
+    : "No guilt. Your plant bounces back when you do.";
+
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onDismiss} />
@@ -208,39 +265,63 @@ function RecoverySheet({ missedTopic, smallestStep, onLogNow, onDismiss }: {
           <PlantVisual state="wilting" className="w-20 h-20" />
         </div>
 
-        <h2 className="text-xl font-black text-on-surface mb-1">You missed yesterday.</h2>
-        <p className="text-sm text-on-surface-variant mb-5">
-          No guilt. Your plant bounces back when you do.
-        </p>
+        <h2 className="text-xl font-black text-on-surface mb-1">{title}</h2>
+        <p className="text-sm text-on-surface-variant mb-5">{subtitle}</p>
 
-        <div className="bg-surface-container rounded-bento p-4 mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">
-            What you missed
-          </p>
-          <p className="text-sm font-bold text-on-surface">{missedTopic}</p>
-        </div>
+        {!isFeedbackMode && (
+          <>
+            <div className="bg-surface-container rounded-bento p-4 mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">
+                What you missed
+              </p>
+              <p className="text-sm font-bold text-on-surface">{missedTopic}</p>
+            </div>
 
-        <div className="bg-[#ffac9d]/20 border border-[#a63c2a]/20 rounded-bento p-4 mb-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#a63c2a] mb-1">
-            Smallest step right now
-          </p>
-          <p className="text-sm font-bold text-on-surface">{smallestStep}</p>
-          <p className="text-xs text-on-surface-variant mt-1">~10 minutes</p>
-        </div>
+            <div className="bg-[#ffac9d]/20 border border-[#a63c2a]/20 rounded-bento p-4 mb-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#a63c2a] mb-1">
+                Smallest step right now
+              </p>
+              <p className="text-sm font-bold text-on-surface">{smallestStep}</p>
+              <p className="text-xs text-on-surface-variant mt-1">~10 minutes</p>
+            </div>
+          </>
+        )}
 
-        <button
-          onClick={onLogNow}
-          className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2 mb-3"
-        >
-          I'm starting now
-          <ArrowRight className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onDismiss}
-          className="w-full py-3 rounded-full border border-outline-variant text-on-surface-variant font-bold text-sm"
-        >
-          I'll do it later today
-        </button>
+        {isFeedbackMode ? (
+          <>
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSdSfsTmuD6VPdheTJiEVMmZkedUnNbrFO5mm_C7TtzavhSxDQ/viewform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2 mb-3"
+            >
+              Share what happened
+              <ArrowRight className="w-5 h-5" />
+            </a>
+            <button
+              onClick={onLogNow}
+              className="w-full py-3 rounded-full border border-[#a63c2a]/40 text-[#a63c2a] font-bold text-sm mb-2"
+            >
+              Actually, I'm ready to start again
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onLogNow}
+              className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2 mb-3"
+            >
+              I'm starting now
+              <ArrowRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onDismiss}
+              className="w-full py-3 rounded-full border border-outline-variant text-on-surface-variant font-bold text-sm"
+            >
+              I'll do it later today
+            </button>
+          </>
+        )}
       </div>
     </>
   );
@@ -250,21 +331,17 @@ function RecoverySheet({ missedTopic, smallestStep, onLogNow, onDismiss }: {
 
 export default function DashboardV3() {
   const navigate = useNavigate();
-  const { activeMilestone, activeLogs } = useApp();
+  const { activeMilestone, activeLogs, addLog } = useApp();
   const todayStr = today();
   const yesterdayStr = getYesterday();
   const weekDays = getWeekDays();
 
-  useEffect(() => {
-  if (!activeMilestone) return;
-  syncScheduleToSW({
-    reminderTime: activeMilestone.notifReminderTime ?? '07:00 PM',
-    checkinTime: activeMilestone.notifCheckinTime ?? '09:00 PM',
-    studyDays: activeMilestone.studyDays ?? ['Mon','Tue','Wed','Thu','Fri'],
-    todayLogged: !!activeLogs.find(l => l.date === todayStr && l.completed),
-    missedYesterday: !!activeLogs.find(l => l.date === yesterdayStr && !l.completed),
-  });
-}, [activeMilestone, activeLogs]);
+  const studyDays = activeMilestone?.studyDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  const missStreak = getMissStreak(activeLogs, studyDays, todayStr);
+  const todayLogged = activeLogs.find(l => l.date === todayStr);
+  const missedYesterday = activeLogs.find(l => l.date === yesterdayStr && !l.completed);
+  const showMissBanner = missStreak > 0 && !todayLogged?.completed;
 
   const [completedGoals, setCompletedGoals] = useState<Set<string>>(() => {
     try {
@@ -275,8 +352,24 @@ export default function DashboardV3() {
 
   const [showRecovery, setShowRecovery] = useState(false);
 
-  // addLog via context
-  const { addLog } = useApp();
+  useEffect(() => {
+    if (!activeMilestone) return;
+    syncScheduleToSW({
+      reminderTime: activeMilestone.notifReminderTime ?? '07:00 PM',
+      checkinTime: activeMilestone.notifCheckinTime ?? '09:00 PM',
+      studyDays: activeMilestone.studyDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      todayLogged: !!activeLogs.find(l => l.date === todayStr && l.completed),
+      missedYesterday: !!activeLogs.find(l => l.date === yesterdayStr && !l.completed),
+      missStreak,
+    });
+  }, [activeMilestone, activeLogs]);
+
+  // Auto-open recovery sheet on day 3+
+  useEffect(() => {
+    if (missStreak >= 3 && !todayLogged?.completed) {
+      setShowRecovery(true);
+    }
+  }, [missStreak]);
 
   function toggleGoal(goalKey: string) {
     setCompletedGoals(prev => {
@@ -295,15 +388,10 @@ export default function DashboardV3() {
   const weekNumber = getCurrentWeekNumber(activeMilestone?.activatedAt);
   const daysLeft = getDaysLeft(activeMilestone?.deadline);
   const plantState = getPlantState(activeLogs, todayStr);
-  const todayLogged = activeLogs.find(l => l.date === todayStr);
-  const missedYesterday = activeLogs.find(l => l.date === yesterdayStr && !l.completed);
-  const showMissBanner = !!missedYesterday && !todayLogged?.completed;
 
-  // Metrics
   const avgRecovery = getAvgRecoveryDays(activeLogs);
-  const studyDays = activeMilestone?.studyDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const { done: weekDone, planned: weekPlanned } = getWeekSessionStats(activeLogs, studyDays, weekDays, todayStr);
-  const streak = getCurrentStreak(activeLogs);
+  const streak = getCurrentStreak(activeLogs, studyDays);
 
   const currentWeek = useMemo(() => {
     if (!journey) return null;
@@ -326,6 +414,12 @@ export default function DashboardV3() {
     setShowRecovery(false);
   }
 
+  const bannerTitle = missStreak >= 5
+    ? 'Your plant is barely hanging on.'
+    : missStreak >= 2
+    ? `You've missed ${missStreak} days in a row.`
+    : 'You missed yesterday.';
+
   if (!activeMilestone) {
     return (
       <div className="h-screen bg-m3-bg font-jakarta flex flex-col items-center justify-center px-6 text-center">
@@ -344,7 +438,6 @@ export default function DashboardV3() {
   return (
     <div className="h-screen bg-m3-bg font-jakarta flex flex-col overflow-hidden">
 
-      {/* Header — no settings, no dropdown */}
       <header className="flex-shrink-0 flex justify-between items-center px-5 pt-5 pb-2">
         <div>
           <h1 className="text-base font-black text-on-surface leading-tight">
@@ -359,7 +452,6 @@ export default function DashboardV3() {
 
       <main className="flex-1 overflow-y-auto px-4 pb-4">
 
-        {/* Plant */}
         <div className="flex flex-col items-center py-4">
           <PlantVisual state={plantState} className="w-28 h-28" />
           <p className="text-xs font-bold text-on-surface-variant mt-2">
@@ -369,7 +461,6 @@ export default function DashboardV3() {
           </p>
         </div>
 
-        {/* Week strip */}
         <div className="flex gap-1.5 mb-4">
           {weekDays.map(({ label, date }) => (
             <DayPill
@@ -382,7 +473,6 @@ export default function DashboardV3() {
           ))}
         </div>
 
-        {/* Metrics row */}
         <div className="flex gap-2 mb-4">
           <MetricCard
             highlight
@@ -393,16 +483,15 @@ export default function DashboardV3() {
           <MetricCard
             value={`${weekDone}/${weekPlanned}`}
             label="This week"
-            sub="sessions planned"
+            sub="sessions done"
           />
           <MetricCard
             value={streak > 0 ? `${streak}` : '—'}
             label="Streak"
-            sub={streak > 0 ? 'days in a row' : 'Start today'}
+            sub={streak > 0 ? 'sessions in a row' : 'Start today'}
           />
         </div>
 
-        {/* Miss recovery banner */}
         {showMissBanner && (
           <button
             onClick={() => setShowRecovery(true)}
@@ -410,7 +499,7 @@ export default function DashboardV3() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-red-700 mb-0.5">You missed yesterday.</p>
+                <p className="text-sm font-bold text-red-700 mb-0.5">{bannerTitle}</p>
                 <p className="text-xs text-red-500">Tap to see the smallest step back.</p>
               </div>
               <ArrowRight className="w-4 h-4 text-red-400 flex-shrink-0" />
@@ -418,7 +507,6 @@ export default function DashboardV3() {
           </button>
         )}
 
-        {/* Weekly goals */}
         {currentWeek ? (
           <section className="bg-surface-container-lowest rounded-bento border border-outline-variant/15 mb-4">
             <div className="px-4 pt-4 pb-2 border-b border-outline-variant/20">
@@ -472,7 +560,6 @@ export default function DashboardV3() {
 
       </main>
 
-      {/* Fixed CTA */}
       <div className="flex-shrink-0 px-4 py-4 bg-m3-bg border-t border-outline-variant/20">
         {todayLogged?.completed ? (
           <div className="w-full py-4 rounded-full bg-[#4ade80]/15 border border-[#16a34a]/30 flex items-center justify-center gap-2">
@@ -489,11 +576,11 @@ export default function DashboardV3() {
         )}
       </div>
 
-      {/* Recovery bottom sheet */}
       {showRecovery && (
         <RecoverySheet
           missedTopic={missedTopic}
           smallestStep={smallestStep}
+          missStreak={missStreak}
           onLogNow={handleLogSession}
           onDismiss={() => setShowRecovery(false)}
         />

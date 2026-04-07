@@ -29,8 +29,7 @@ const AppInner = () => {
     <BrowserRouter>
       <DevModeBar />
       <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/welcome" element={<HeroScreen />} />        
+        <Route path="/" element={<Navigate to="/welcome" replace />} />        <Route path="/welcome" element={<HeroScreen />} />        
         <Route path="/onboarding" element={devMode === 'newui' ? <OnboardingV2 /> : <Onboarding />} />
         <Route path="/dashboard" element={devMode === 'newui' ? <DashboardV2Layout /> : <Dashboard />} />
         <Route path="/checkin" element={<CheckIn />} />

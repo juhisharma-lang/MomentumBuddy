@@ -32,6 +32,7 @@ export async function syncScheduleToSW(schedule: {
   studyDays: string[];
   todayLogged: boolean;
   missedYesterday: boolean;
+  missStreak?: number;
 }): Promise<void> {
   if (!('serviceWorker' in navigator)) return;
   if (Notification.permission !== 'granted') return;
