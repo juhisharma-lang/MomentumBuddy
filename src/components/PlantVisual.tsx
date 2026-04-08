@@ -1,11 +1,13 @@
-import plant1 from '@/assets/plants/plant-1-seedling.png';
-import plant2 from '@/assets/plants/plant-2-young.png';
-import plant3 from '@/assets/plants/plant-3-midgrowth.png';
-import plant4 from '@/assets/plants/plant-4-blooming.png';
-import plant5 from '@/assets/plants/plant-5-peak.png';
-import plant6 from '@/assets/plants/plant-6-starting-wilt.png';
-import plant7 from '@/assets/plants/plant-7-wilting.png';
-import plant8 from '@/assets/plants/plant-8-fully-wilted.png';
+const PLANTS = {
+  1: '/plants/plant-1-seedling.png',
+  2: '/plants/plant-2-young.png',
+  3: '/plants/plant-3-midgrowth.png',
+  4: '/plants/plant-4-blooming.png',
+  5: '/plants/plant-5-peak.png',
+  6: '/plants/plant-6-starting-wilt.png',
+  7: '/plants/plant-7-wilting.png',
+  8: '/plants/plant-8-fully-wilted.png',
+} as const;
 
 interface PlantVisualProps {
   state: 'growing' | 'wilting' | 'recovered';
@@ -20,17 +22,17 @@ function getPlantImage(
   sessionStreak: number
 ): string {
   if (state === 'wilting') {
-    if (missStreak >= 5) return plant8;
-    if (missStreak >= 2) return plant7;
-    return plant6;
+    if (missStreak >= 5) return PLANTS[8];
+    if (missStreak >= 2) return PLANTS[7];
+    return PLANTS[6];
   }
-  if (state === 'recovered') return plant3;
+  if (state === 'recovered') return PLANTS[3];
   // growing — advance based on session streak
-  if (sessionStreak >= 15) return plant5;
-  if (sessionStreak >= 10) return plant4;
-  if (sessionStreak >= 5)  return plant3;
-  if (sessionStreak >= 2)  return plant2;
-  return plant1;
+  if (sessionStreak >= 15) return PLANTS[5];
+  if (sessionStreak >= 10) return PLANTS[4];
+  if (sessionStreak >= 5)  return PLANTS[3];
+  if (sessionStreak >= 2)  return PLANTS[2];
+  return PLANTS[1];
 }
 
 function getAltText(
