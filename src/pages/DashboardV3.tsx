@@ -131,16 +131,18 @@ function getCurrentStreak(
 function getMissStreak(
   logs: { date: string; completed: boolean }[],
   studyDays: string[],
-  todayStr: string
+  todayStr: string,
+  activatedAt?: string
 ): number {
   const dayNameMap: Record<number, string> = {
     0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
   };
   let streak = 0;
   let cursor = new Date(todayStr);
-  cursor.setDate(cursor.getDate() - 1); // start from yesterday
+  cursor.setDate(cursor.getDate() - 1);
   for (let i = 0; i < 30; i++) {
     const dateStr = cursor.toISOString().split('T')[0];
+    if (activatedAt && dateStr < activatedAt) break;
     const dayName = dayNameMap[cursor.getDay()];
     if (!studyDays.includes(dayName)) {
       cursor.setDate(cursor.getDate() - 1);
@@ -361,7 +363,7 @@ export default function DashboardV3() {
 
   const studyDays = activeMilestone?.studyDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-  const missStreak = getMissStreak(activeLogs, studyDays, todayStr);
+const missStreak = getMissStreak(activeLogs, studyDays, todayStr, activeMilestone?.activatedAt);
   const todayLogged = activeLogs.find(l => l.date === todayStr);
   const missedYesterday = activeLogs.find(l => l.date === yesterdayStr && !l.completed);
   const showMissBanner = missStreak > 0 && !todayLogged?.completed;
