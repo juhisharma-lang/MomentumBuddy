@@ -564,12 +564,12 @@ function Screen3({
             </div>
           </section>
 
-          {/* What this means */}
+          {/* How nudges work */}
           <section className="bg-surface-container-lowest rounded-bento p-5 border border-outline-variant/15">
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">
               What this means
             </p>
-            <div className="flex flex-col gap-3">
+           <div className="flex flex-col gap-3">
               <div className="flex items-start gap-3">
                 <div className="w-7 h-7 bg-secondary-container rounded-full flex items-center justify-center shrink-0 mt-0.5">
                   <Bell className="w-3.5 h-3.5 text-on-secondary-container" />
@@ -589,6 +589,17 @@ function Screen3({
                   <p className="text-sm font-bold text-on-surface">Evening check-in</p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
                     About 2 hours after your study time, we'll ask: "Did you get your session in?" — one tap to answer.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 bg-surface-container rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-xs">ℹ️</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-on-surface">How nudges work right now</p>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    Nudges fire while the app is open in your browser. Background notifications are coming in the next update.
                   </p>
                 </div>
               </div>
@@ -633,13 +644,14 @@ function Screen3({
                 >
                   Enable Notifications
                 </button>
-                <p className="text-center text-[10px] text-on-surface-variant mt-2">
-                  Notifications are being rolled out — we'll activate them in the next update.
-                </p>
+{Notification.permission === 'denied' && (
+                  <p className="text-center text-xs text-on-surface-variant mt-2">
+                    Notifications blocked. To enable: click the lock icon in your address bar → Notifications → Allow.
+                  </p>
+                )}
               </>
             )}
           </div>
-
         </div>
       </main>
 
