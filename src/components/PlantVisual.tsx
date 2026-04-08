@@ -61,14 +61,17 @@ export default function PlantVisual({
 }: PlantVisualProps) {
   const src = getPlantImage(state, missStreak, sessionStreak);
   const alt = getAltText(state, missStreak, sessionStreak);
-
-  return (
+return (
   <img
     src={src}
     alt={alt}
     className={className}
     draggable={false}
-    style={{ mixBlendMode: 'multiply' }}
+    style={{ 
+      mixBlendMode: 'multiply',
+      objectFit: 'contain',
+      padding: '8px'
+    }}
   />
 );
 }
