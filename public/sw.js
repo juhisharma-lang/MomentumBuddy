@@ -1,4 +1,4 @@
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseTime(timeStr) {
   if (!timeStr) return null;
@@ -45,15 +45,16 @@ self.addEventListener('message', (event) => {
 
   if (type === 'SHOW_NOTIFICATION') {
     const { title, body, url = '/dashboard-v3' } = event.data;
-    self.registration.showNotification(title, {
-      body,
-      icon: '/favicon.ico',
-      tag: 'lb-manual',
-      data: { url },
-    });
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body,
+        icon: '/favicon.ico',
+        tag: 'lb-manual',
+        data: { url },
+      })
+    );
   }
 });
-
 // ── Notification click ────────────────────────────────────────────────────────
 
 self.addEventListener('notificationclick', (event) => {
@@ -85,6 +86,7 @@ async function runNudgeCheck() {
 
   if (todayLogged) return;
 
+  // 1. Study reminder — 10 min before study time
   if (withinWindow(shiftMinutes(reminder, -10), 4)) {
     const body = missStreak >= 5
       ? `Your plant is barely hanging on. Come back today — even 10 minutes.`
@@ -97,6 +99,7 @@ async function runNudgeCheck() {
     return;
   }
 
+  // 2. Check-in — at check-in time
   if (withinWindow(checkin, 4)) {
     const body = missStreak >= 2
       ? `${missStreak} days missed. Log even 10 minutes today to turn this around.`
@@ -107,6 +110,7 @@ async function runNudgeCheck() {
     return;
   }
 
+  // 3. Recovery nudge — 30 min after check-in
   if (withinWindow(shiftMinutes(checkin, 30), 4)) {
     const body = missStreak >= 7
       ? `You've been away a week. Your course isn't gone — but it needs you today.`
@@ -123,6 +127,6 @@ async function runNudgeCheck() {
   }
 }
 
-// ── Run every 5 minutes ───────────────────────────────────────────────────────
+// ── Interval — check every 5 minutes ─────────────────────────────────────────
 
 setInterval(runNudgeCheck, 5 * 60 * 1000);
