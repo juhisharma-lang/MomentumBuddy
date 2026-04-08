@@ -63,11 +63,12 @@ export default function PlantVisual({
   const alt = getAltText(state, missStreak, sessionStreak);
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={className}
-      draggable={false}
-    />
-  );
+  <img
+    src={src}
+    alt={alt}
+    className={className}
+    draggable={false}
+    style={{ mixBlendMode: 'multiply' }}
+  />
+);
 }
