@@ -118,12 +118,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Milestone actions ──────────────────────────────────────────────────────
 
-  const addMilestone = (milestone: Milestone) => {
+ const addMilestone = (milestone: Milestone) => {
   setState(prev => {
-    const milestones = [...prev.milestones, milestone];
-    const activeMilestoneId =
-      milestone.status === 'active' ? milestone.id : prev.activeMilestoneId;
-    return { ...prev, milestones, activeMilestoneId };
+    const abandonedAt = new Date().toISOString().split('T')[0];
+    const milestones = prev.milestones.map(m =>
+      m.status === 'active'
+        ? { ...m, status: 'abandoned' as const, abandonedAt }
+        : m
+    );
+    return {
+      ...prev,
+      milestones: [...milestones, milestone],
+      activeMilestoneId: milestone.status === 'active' ? milestone.id : prev.activeMilestoneId,
+    };
   });
 };
 

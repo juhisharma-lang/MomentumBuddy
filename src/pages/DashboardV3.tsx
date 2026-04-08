@@ -224,13 +224,15 @@ function GoalItem({ title, done, onToggle }: {
 
 // ── Recovery bottom sheet ─────────────────────────────────────────────────────
 
-function RecoverySheet({ missedTopic, smallestStep, missStreak, onLogNow, onDismiss }: {
+function RecoverySheet({ missedTopic, smallestStep, missStreak, plantState, onLogNow, onDismiss }: {
   missedTopic: string;
   smallestStep: string;
   missStreak: number;
+  plantState: 'growing' | 'wilting' | 'recovered';
   onLogNow: () => void;
   onDismiss: () => void;
 }) {
+  const [feedbackText, setFeedbackText] = useState('');
   const isFeedbackMode = missStreak >= 7;
 
   const title = missStreak >= 7
@@ -249,6 +251,22 @@ function RecoverySheet({ missedTopic, smallestStep, missStreak, onLogNow, onDism
     ? "Every day you wait makes re-entry harder. Start tiny."
     : "No guilt. Your plant bounces back when you do.";
 
+  function handleShareAndStart() {
+    if (feedbackText.trim()) {
+      const entry = {
+        id: crypto.randomUUID(),
+        recordedAt: new Date().toISOString().split('T')[0],
+        missStreak,
+        note: feedbackText.trim(),
+      };
+      try {
+        const existing = JSON.parse(localStorage.getItem('lb_lapse_feedback') ?? '[]');
+        localStorage.setItem('lb_lapse_feedback', JSON.stringify([...existing, entry]));
+      } catch { /* silently skip */ }
+    }
+    onLogNow();
+  }
+
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onDismiss} />
@@ -262,8 +280,11 @@ function RecoverySheet({ missedTopic, smallestStep, missStreak, onLogNow, onDism
         </button>
 
         <div className="flex justify-center mb-4">
-          <PlantVisual state="wilting" className="w-20 h-20" />
-        </div>
+<PlantVisual
+  state={missStreak >= 2 ? 'wilting' : 'growing'}
+  missStreak={missStreak}
+  className="w-20 h-20"
+/>        </div>
 
         <h2 className="text-xl font-black text-on-surface mb-1">{title}</h2>
         <p className="text-sm text-on-surface-variant mb-5">{subtitle}</p>
@@ -276,7 +297,6 @@ function RecoverySheet({ missedTopic, smallestStep, missStreak, onLogNow, onDism
               </p>
               <p className="text-sm font-bold text-on-surface">{missedTopic}</p>
             </div>
-
             <div className="bg-[#ffac9d]/20 border border-[#a63c2a]/20 rounded-bento p-4 mb-5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#a63c2a] mb-1">
                 Smallest step right now
@@ -289,20 +309,24 @@ function RecoverySheet({ missedTopic, smallestStep, missStreak, onLogNow, onDism
 
         {isFeedbackMode ? (
           <>
-            <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSdSfsTmuD6VPdheTJiEVMmZkedUnNbrFO5mm_C7TtzavhSxDQ/viewform"
-              target="_blank"
-              rel="noopener noreferrer"
+            <textarea
+              value={feedbackText}
+              onChange={e => setFeedbackText(e.target.value)}
+              placeholder="What got in the way? (optional)"
+              className="w-full border border-outline-variant rounded-bento p-3 text-sm font-jakarta resize-none h-20 mb-4 bg-surface-container text-on-surface"
+            />
+            <button
+              onClick={handleShareAndStart}
               className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2 mb-3"
             >
-              Share what happened
+              {feedbackText.trim() ? 'Share & start again' : 'Start again'}
               <ArrowRight className="w-5 h-5" />
-            </a>
+            </button>
             <button
-              onClick={onLogNow}
-              className="w-full py-3 rounded-full border border-[#a63c2a]/40 text-[#a63c2a] font-bold text-sm mb-2"
+              onClick={onDismiss}
+              className="w-full py-3 rounded-full border border-outline-variant text-on-surface-variant font-bold text-sm"
             >
-              Actually, I'm ready to start again
+              Not ready yet
             </button>
           </>
         ) : (
@@ -326,7 +350,6 @@ function RecoverySheet({ missedTopic, smallestStep, missStreak, onLogNow, onDism
     </>
   );
 }
-
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function DashboardV3() {
@@ -438,23 +461,33 @@ export default function DashboardV3() {
   return (
     <div className="h-screen bg-m3-bg font-jakarta flex flex-col overflow-hidden">
 
-      <header className="flex-shrink-0 flex justify-between items-center px-5 pt-5 pb-2">
-        <div>
-          <h1 className="text-base font-black text-on-surface leading-tight">
-            {journey?.name ?? activeMilestone.goalTitle}
-          </h1>
-          <p className="text-[11px] text-on-surface-variant mt-0.5">
-            Week {weekNumber}
-            {daysLeft !== null && ` · ${daysLeft} days left`}
-          </p>
-        </div>
-      </header>
+     <header className="flex-shrink-0 flex justify-between items-center px-5 pt-5 pb-2">
+  <div>
+    <h1 className="text-base font-black text-on-surface leading-tight">
+      {journey?.name ?? activeMilestone.goalTitle}
+    </h1>
+    <p className="text-[11px] text-on-surface-variant mt-0.5">
+      Week {weekNumber}
+      {daysLeft !== null && ` · ${daysLeft} days left`}
+    </p>
+  </div>
+  <button
+    onClick={() => navigate('/onboarding-v3')}
+    className="text-[11px] text-on-surface-variant border border-outline-variant/40 rounded-full px-3 py-1.5 font-medium active:opacity-70"
+  >
+    Change journey
+  </button>
+</header>
 
       <main className="flex-1 overflow-y-auto px-4 pb-4">
 
         <div className="flex flex-col items-center py-4">
-          <PlantVisual state={plantState} className="w-28 h-28" />
-          <p className="text-xs font-bold text-on-surface-variant mt-2">
+<PlantVisual
+  state={plantState}
+  missStreak={missStreak}
+  sessionStreak={streak}
+  className="w-28 h-28"
+/>          <p className="text-xs font-bold text-on-surface-variant mt-2">
             {plantState === 'growing' && 'Growing steadily'}
             {plantState === 'wilting' && 'Needs attention — come back today'}
             {plantState === 'recovered' && 'Coming back — keep going'}
@@ -488,7 +521,7 @@ export default function DashboardV3() {
           <MetricCard
             value={streak > 0 ? `${streak}` : '—'}
             label="Streak"
-            sub={streak > 0 ? 'sessions in a row' : 'Start today'}
+            sub={streak > 0 ? `scheduled sessions in a row` : 'Start today'}
           />
         </div>
 
@@ -577,14 +610,15 @@ export default function DashboardV3() {
       </div>
 
       {showRecovery && (
-        <RecoverySheet
-          missedTopic={missedTopic}
-          smallestStep={smallestStep}
-          missStreak={missStreak}
-          onLogNow={handleLogSession}
-          onDismiss={() => setShowRecovery(false)}
-        />
-      )}
+  <RecoverySheet
+    missedTopic={missedTopic}
+    smallestStep={smallestStep}
+    missStreak={missStreak}
+    plantState={plantState}
+    onLogNow={handleLogSession}
+    onDismiss={() => setShowRecovery(false)}
+  />
+)}
 
     </div>
   );
