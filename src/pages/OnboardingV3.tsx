@@ -226,13 +226,16 @@ function Screen1b({
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [newGoalText, setNewGoalText] = useState('');
 
-  function handleSetup() {
+function handleSetup() {
     if (!goalName.trim() || weekCount < 1) return;
-    setWeekTitles(Array.from({ length: weekCount }, (_, i) => `Week ${i + 1}`));
-    setWeekGoals(Array.from({ length: weekCount }, () => []));
+    setWeekTitles(prev =>
+      prev.length === weekCount ? prev : Array.from({ length: weekCount }, (_, i) => prev[i] ?? `Week ${i + 1}`)
+    );
+    setWeekGoals(prev =>
+      prev.length === weekCount ? prev : Array.from({ length: weekCount }, (_, i) => prev[i] ?? [])
+    );
     setStep('name-weeks');
   }
-
   function handleAddGoal(weekIndex: number) {
     if (!newGoalText.trim()) return;
     setWeekGoals(prev => {

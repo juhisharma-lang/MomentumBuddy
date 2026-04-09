@@ -87,7 +87,7 @@ async function runNudgeCheck() {
   if (todayLogged) return;
 
   // 1. Study reminder — 10 min before study time
-  if (withinWindow(shiftMinutes(reminder, -10), 4)) {
+  if (withinWindow(shiftMinutes(reminder, -10), 6)) {
     const body = missStreak >= 5
       ? `Your plant is barely hanging on. Come back today — even 10 minutes.`
       : missStreak >= 2
@@ -100,7 +100,7 @@ async function runNudgeCheck() {
   }
 
   // 2. Check-in — at check-in time
-  if (withinWindow(checkin, 4)) {
+  if (withinWindow(checkin, 6)) {
     const body = missStreak >= 2
       ? `${missStreak} days missed. Log even 10 minutes today to turn this around.`
       : `Tap to log your session — takes 5 seconds.`;
@@ -111,7 +111,7 @@ async function runNudgeCheck() {
   }
 
   // 3. Recovery nudge — 30 min after check-in
-  if (withinWindow(shiftMinutes(checkin, 30), 4)) {
+  if (withinWindow(shiftMinutes(checkin, 30), 6)) {
     const body = missStreak >= 7
       ? `You've been away a week. Your course isn't gone — but it needs you today.`
       : missStreak >= 5

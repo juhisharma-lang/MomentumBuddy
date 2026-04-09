@@ -682,10 +682,11 @@ if (!activeMilestone) {
     );
   }
 
-  if (activeLogs.length === 0) {
+const isDay0 = activeLogs.length === 0 && activeMilestone.activatedAt === todayStr;
+
+  if (isDay0) {
     return <Day0Screen milestone={activeMilestone} onLog={handleLogSession} />;
   }
-
   return (
     <div className="h-screen bg-m3-bg font-jakarta flex flex-col overflow-hidden">
 
@@ -812,8 +813,11 @@ const baseGoals = currentWeek.goals.map((goal, i) => {
                   if (edit?.pushedToWeek && edit.pushedToWeek !== weekNumber && !edit.replacedWith) return null;
                   return { title: edit?.replacedWith ?? goal, originalIndex: i };                }).filter(Boolean) as { title: string; originalIndex: number }[];
                 const allGoals = [
-                  ...pushedIn.map(e => ({ title: currentWeek.goals[e.index] ?? 'Pushed goal', originalIndex: -(e.index + 1) })),
-                  ...baseGoals,
+...pushedIn.map(e => {
+                  const sourceWeek = journey?.weeks[(e.weekNumber - 1)];
+                  const sourceTitle = sourceWeek?.goals[e.index] ?? 'Pushed goal';
+                  return { title: sourceTitle, originalIndex: -(e.index * 100 + e.weekNumber) };
+                }),                  ...baseGoals,
                 ];
 
                 return allGoals.map(({ title, originalIndex }) => {

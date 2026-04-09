@@ -38,14 +38,22 @@ export default function Settings() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const activePause = activePauses.find(p => p.pausedFrom <= today && p.pausedUntil >= today);
 
-  function handlePause() {
+function handlePause() {
     if (!pauseDays) return;
     const until = format(addDays(new Date(), pauseDays), 'yyyy-MM-dd');
     addPause({ pausedFrom: today, pausedUntil: until });
     queuePauseExpiredNudge(activeMilestone, until);
+    // Sync pause to SW so nudges stop firing during pause
+    syncScheduleToSW({
+      reminderTime: activeMilestone.notifReminderTime ?? '07:00 PM',
+      checkinTime: activeMilestone.notifCheckinTime ?? '09:00 PM',
+      studyDays: [],
+      todayLogged: true,
+      missedYesterday: false,
+      missStreak: 0,
+    });
     setPauseConfirmed(true);
   }
-
   function toggleDay(day: string) {
     setStudyDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]

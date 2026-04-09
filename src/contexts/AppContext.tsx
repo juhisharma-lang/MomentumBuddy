@@ -59,16 +59,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // Persist on every state change — localStorage first, Supabase in background
+  // Persist on every state change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    // Lazy import to avoid circular dependency
     import('@/lib/sync').then(({ syncToSupabase }) => {
       syncToSupabase(state);
     });
   }, [state]);
 
-// ── Prune logs older than 90 days (runs once on mount) ────────────────────
+  // ── Prune logs older than 90 days (runs once on mount) ────────────────────
   useEffect(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 90);
@@ -83,9 +82,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── Pause expiry check (runs once on mount) ────────────────────────────────
   useEffect(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-        const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
 
     setState(prev => {
       let newLogs = [...prev.logs];
@@ -93,26 +92,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       for (const pause of prev.pauses) {
         if (pause.pausedUntil >= todayStr) continue;
+
         const resumeDate = new Date(pause.pausedUntil);
         resumeDate.setDate(resumeDate.getDate() + 1);
         const resumeDateStr = resumeDate.toISOString().split('T')[0];
         if (resumeDateStr > yesterdayStr) continue;
-        const alreadyLogged = newLogs.some(
-          l => l.milestoneId === pause.milestoneId && l.date === resumeDateStr
-        );
-        if (!alreadyLogged) {
-          newLogs = [
-            ...newLogs,
-            {
-              milestoneId: pause.milestoneId,
-              date: resumeDateStr,
-              completed: false,
-              fallbackTriggered: false,
-            },
-          ];
-          dirty = true;
+
+        // Backfill all missed days from resume date up to yesterday
+        const cursor = new Date(resumeDateStr);
+        const yesterdayCursor = new Date(yesterdayStr);
+        while (cursor <= yesterdayCursor) {
+          const dateStr = cursor.toISOString().split('T')[0];
+          const alreadyLogged = newLogs.some(
+            l => l.milestoneId === pause.milestoneId && l.date === dateStr
+          );
+          if (!alreadyLogged) {
+            newLogs = [
+              ...newLogs,
+              {
+                milestoneId: pause.milestoneId,
+                date: dateStr,
+                completed: false,
+                fallbackTriggered: false,
+              },
+            ];
+            dirty = true;
+          }
+          cursor.setDate(cursor.getDate() + 1);
         }
       }
+
       return dirty ? { ...prev, logs: newLogs } : prev;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,23 +139,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Milestone actions ──────────────────────────────────────────────────────
 
-const addMilestone = (milestone: Milestone) => {
-  localStorage.removeItem('v3_completed_goals');
-  localStorage.removeItem('lb_goal_edits');
-  setState(prev => {
-    const abandonedAt = new Date().toISOString().split('T')[0];
-    const milestones = prev.milestones.map(m =>
-      m.status === 'active'
-        ? { ...m, status: 'abandoned' as const, abandonedAt }
-        : m
-    );
-    return {
-      ...prev,
-      milestones: [...milestones, milestone],
-      activeMilestoneId: milestone.status === 'active' ? milestone.id : prev.activeMilestoneId,
-    };
-  });
-};
+  const addMilestone = (milestone: Milestone) => {
+    localStorage.removeItem('v3_completed_goals');
+    localStorage.removeItem('lb_goal_edits');
+    setState(prev => {
+      const abandonedAt = new Date().toISOString().split('T')[0];
+      const milestones = prev.milestones.map(m =>
+        m.status === 'active'
+          ? { ...m, status: 'abandoned' as const, abandonedAt }
+          : m
+      );
+      return {
+        ...prev,
+        milestones: [...milestones, milestone],
+        activeMilestoneId: milestone.status === 'active' ? milestone.id : prev.activeMilestoneId,
+      };
+    });
+  };
+
   const updateMilestone = (id: string, updates: Partial<Milestone>) => {
     setState(prev => ({
       ...prev,
