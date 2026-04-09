@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { getJourney } from '@/data/journeys';
 import PlantVisual from '@/components/PlantVisual';
-import { CheckCircle2, Circle, X, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Circle, X, ArrowRight, Pencil } from 'lucide-react';
 import { syncScheduleToSW } from '@/lib/notifications';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -205,25 +205,129 @@ function MetricCard({ value, label, sub, highlight }: {
 
 // ── Goal item ─────────────────────────────────────────────────────────────────
 
-function GoalItem({ title, done, onToggle }: {
-  title: string; done: boolean; onToggle: () => void;
+function GoalItem({ title, done, onToggle, onEdit }: {
+  title: string; done: boolean; onToggle: () => void; onEdit: () => void;
 }) {
   return (
-    <button
-      onClick={onToggle}
-      className="flex items-start gap-3 w-full text-left py-2.5 border-b border-outline-variant/20 last:border-0 active:opacity-70 transition-opacity"
-    >
-      {done
-        ? <CheckCircle2 className="w-5 h-5 text-[#16a34a] flex-shrink-0 mt-0.5" />
-        : <Circle className="w-5 h-5 text-outline-variant flex-shrink-0 mt-0.5" />
-      }
-      <span className={`text-sm leading-snug ${done ? 'text-on-surface-variant line-through' : 'text-on-surface font-medium'}`}>
-        {title}
-      </span>
-    </button>
+    <div className="flex items-start gap-3 w-full py-2.5 border-b border-outline-variant/20 last:border-0">
+      <button onClick={onToggle} className="flex items-start gap-3 flex-1 text-left active:opacity-70 transition-opacity">
+        {done
+          ? <CheckCircle2 className="w-5 h-5 text-[#16a34a] flex-shrink-0 mt-0.5" />
+          : <Circle className="w-5 h-5 text-outline-variant flex-shrink-0 mt-0.5" />
+        }
+        <span className={`text-sm leading-snug ${done ? 'text-on-surface-variant line-through' : 'text-on-surface font-medium'}`}>
+          {title}
+        </span>
+      </button>
+      <button onClick={onEdit} className="flex-shrink-0 mt-0.5 p-1 active:opacity-60">
+        <Pencil className="w-3.5 h-3.5 text-outline-variant" />
+      </button>
+    </div>
   );
 }
 
+// ── Goal edit sheet ───────────────────────────────────────────────────────────
+
+type GoalEdit = {
+  milestoneId: string;
+  weekNumber: number;
+  index: number;
+  replacedWith?: string;
+  pushedToWeek?: number;
+};
+
+function loadGoalEdits(): GoalEdit[] {
+  try { return JSON.parse(localStorage.getItem('lb_goal_edits') ?? '[]'); } catch { return []; }
+}
+
+function saveGoalEdits(edits: GoalEdit[]) {
+  localStorage.setItem('lb_goal_edits', JSON.stringify(edits));
+}
+
+function GoalEditSheet({ goal, weekNumber, index, milestoneId, onDismiss }: {
+  goal: string;
+  weekNumber: number;
+  index: number;
+  milestoneId: string;
+  onDismiss: () => void;
+}) {
+  const [mode, setMode] = useState<null | 'replace' | 'push'>(null);
+  const [replaceText, setReplaceText] = useState('');
+
+  function handlePush() {
+    const edits = loadGoalEdits().filter(
+      e => !(e.milestoneId === milestoneId && e.weekNumber === weekNumber && e.index === index)
+    );
+    edits.push({ milestoneId, weekNumber, index, pushedToWeek: weekNumber + 1 });
+    saveGoalEdits(edits);
+    onDismiss();
+  }
+
+  function handleReplace() {
+    if (!replaceText.trim()) return;
+    const edits = loadGoalEdits().filter(
+      e => !(e.milestoneId === milestoneId && e.weekNumber === weekNumber && e.index === index)
+    );
+    edits.push({ milestoneId, weekNumber, index, replacedWith: replaceText.trim(), pushedToWeek: weekNumber + 1 });
+    saveGoalEdits(edits);
+    onDismiss();
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onDismiss} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-m3-bg rounded-t-[2rem] px-5 pt-5 pb-8 font-jakarta shadow-[0_-20px_60px_rgba(0,0,0,0.15)]">
+        <div className="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-5" />
+        <button onClick={onDismiss} className="absolute top-5 right-5 w-8 h-8 bg-surface-container rounded-full flex items-center justify-center">
+          <X className="w-4 h-4 text-on-surface-variant" />
+        </button>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Editing goal</p>
+        <p className="text-sm font-bold text-on-surface mb-5 pr-8">{goal}</p>
+
+        {!mode && (
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setMode('replace')}
+              className="w-full py-3.5 rounded-bento bg-surface-container text-on-surface font-bold text-sm text-left px-4"
+            >
+              I covered something else this week
+              <p className="text-xs text-on-surface-variant font-normal mt-0.5">Type what you studied - original moves to next week</p>
+            </button>
+            <button
+              onClick={handlePush}
+              className="w-full py-3.5 rounded-bento bg-surface-container text-on-surface font-bold text-sm text-left px-4"
+            >
+              Push to next week
+              <p className="text-xs text-on-surface-variant font-normal mt-0.5">Keep it for later - no changes this week</p>
+            </button>
+          </div>
+        )}
+
+        {mode === 'replace' && (
+          <>
+            <textarea
+              autoFocus
+              value={replaceText}
+              onChange={e => setReplaceText(e.target.value)}
+              placeholder="What did you actually study?"
+              className="w-full border border-outline-variant rounded-bento p-3 text-sm font-jakarta resize-none h-20 mb-4 bg-surface-container text-on-surface"
+            />
+            <button
+              onClick={handleReplace}
+              disabled={!replaceText.trim()}
+              className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform disabled:opacity-50 mb-3"
+            >
+              Save and push original to next week
+            </button>
+            <button onClick={() => setMode(null)} className="w-full py-3 rounded-full border border-outline-variant text-on-surface-variant font-bold text-sm">
+              Back
+            </button>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
 // ── Recovery bottom sheet ─────────────────────────────────────────────────────
 
 function RecoverySheet({ missedTopic, smallestStep, missStreak, plantState, onLogNow, onDismiss }: {
@@ -474,7 +578,7 @@ const missStreak = getMissStreak(activeLogs, studyDays, todayStr, activeMileston
   const missedYesterday = activeLogs.find(l => l.date === yesterdayStr && !l.completed);
   const showMissBanner = missStreak > 0 && !todayLogged?.completed;
 
-  const [completedGoals, setCompletedGoals] = useState<Set<string>>(() => {
+const [completedGoals, setCompletedGoals] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem('v3_completed_goals');
       return raw ? new Set(JSON.parse(raw)) : new Set();
@@ -482,7 +586,12 @@ const missStreak = getMissStreak(activeLogs, studyDays, todayStr, activeMileston
   });
 
   const [showRecovery, setShowRecovery] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<{ goal: string; index: number } | null>(null);
+  const [goalEdits, setGoalEdits] = useState<GoalEdit[]>(() => loadGoalEdits());
 
+  function refreshGoalEdits() {
+    setGoalEdits(loadGoalEdits());
+  }
   useEffect(() => {
     if (!activeMilestone) return;
     syncScheduleToSW({
@@ -675,20 +784,37 @@ if (!activeMilestone) {
                 />
               </div>
             </div>
-            <div className="px-4 py-1">
-              {currentWeek.goals.map((goal, i) => {
-                const key = `${weekNumber}-${i}`;
-                return (
-                  <GoalItem
-                    key={key}
-                    title={goal}
-                    done={completedGoals.has(key)}
-                    onToggle={() => toggleGoal(key)}
-                  />
+<div className="px-4 py-1">
+              {(() => {
+                const pushedIn = goalEdits.filter(
+                  e => e.milestoneId === activeMilestone.id && e.pushedToWeek === weekNumber
                 );
-              })}
-            </div>
-          </section>
+const baseGoals = currentWeek.goals.map((goal, i) => {
+                  const edit = goalEdits.find(
+                    e => e.milestoneId === activeMilestone.id && e.weekNumber === weekNumber && e.index === i
+                  );
+// Hide only if pushed away AND no replacement text provided
+                  if (edit?.pushedToWeek && edit.pushedToWeek !== weekNumber && !edit.replacedWith) return null;
+                  return { title: edit?.replacedWith ?? goal, originalIndex: i };                }).filter(Boolean) as { title: string; originalIndex: number }[];
+                const allGoals = [
+                  ...pushedIn.map(e => ({ title: currentWeek.goals[e.index] ?? 'Pushed goal', originalIndex: -(e.index + 1) })),
+                  ...baseGoals,
+                ];
+
+                return allGoals.map(({ title, originalIndex }) => {
+                  const key = `${weekNumber}-${originalIndex}`;
+                  return (
+                    <GoalItem
+                      key={key}
+                      title={title}
+                      done={completedGoals.has(key)}
+                      onToggle={() => toggleGoal(key)}
+                      onEdit={() => setEditingGoal({ goal: title, index: originalIndex })}
+                    />
+                  );
+                });
+              })()}
+            </div>          </section>
         ) : (
           <section className="bg-surface-container rounded-bento p-5 mb-4 text-center">
             <p className="text-sm text-on-surface-variant">
@@ -731,7 +857,15 @@ if (!activeMilestone) {
     onDismiss={() => setShowRecovery(false)}
   />
 )}
-
+{editingGoal && (
+        <GoalEditSheet
+          goal={editingGoal.goal}
+          weekNumber={weekNumber}
+          index={editingGoal.index}
+          milestoneId={activeMilestone.id}
+          onDismiss={() => { setEditingGoal(null); refreshGoalEdits(); }}
+        />
+      )}
     </div>
   );
 }
