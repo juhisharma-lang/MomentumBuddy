@@ -661,12 +661,14 @@ const journey = useMemo(() => {
     setShowRecovery(false);
   }
 
-  const bannerTitle = missStreak >= 5
+const bannerTitle = missStreak >= 7
+    ? "You've been away a week."
+    : missStreak >= 5
     ? 'Your plant is barely hanging on.'
     : missStreak >= 2
     ? `You've missed ${missStreak} days in a row.`
     : 'You missed yesterday.';
-
+    
 if (!activeMilestone) {
     return (
       <div className="h-screen bg-m3-bg font-jakarta flex flex-col items-center justify-center px-6 text-center">
