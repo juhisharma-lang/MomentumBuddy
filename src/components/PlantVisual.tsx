@@ -67,10 +67,12 @@ return (
     alt={alt}
     className={className}
     draggable={false}
-    style={{ 
+   style={{ 
       mixBlendMode: 'multiply',
       objectFit: 'contain',
-      padding: '8px'
+      padding: '8px',
+      display: 'block',
+      margin: '0 auto',
     }}
   />
 );

@@ -354,8 +354,114 @@ function RecoverySheet({ missedTopic, smallestStep, missStreak, plantState, onLo
 }
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
-export default function DashboardV3() {
-  const navigate = useNavigate();
+// ── Day 0 empty state ─────────────────────────────────────────────────────────
+
+function Day0Screen({ milestone, onLog }: {
+  milestone: { goalTitle: string; journeyId?: string };
+  onLog: () => void;
+}) {
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  return (
+    <div className="h-screen bg-m3-bg font-jakarta flex flex-col overflow-hidden">
+      <header className="flex-shrink-0 flex justify-between items-center px-5 pt-5 pb-2">
+        <h1 className="text-base font-black text-on-surface">
+          {milestone.goalTitle}
+        </h1>
+        <span className="text-[11px] text-on-surface-variant border border-outline-variant/40 rounded-full px-3 py-1.5 font-medium">
+          Day 1
+        </span>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-4 pb-4">
+
+        <div className="mb-3 pt-2">
+          <h2 className="text-2xl font-black text-on-surface leading-tight">
+            Day 1. <span className="text-[#a63c2a] italic">Let's begin.</span>
+          </h2>
+          <p className="text-sm text-on-surface-variant mt-1">
+            Log your first session today to start your streak.
+          </p>
+        </div>
+
+        <div className="bg-surface-container rounded-bento p-4 mb-3 flex items-center gap-4">
+          <PlantVisual state="growing" className="w-16 h-16 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-on-surface">Your plant is ready to grow</p>
+            <p className="text-xs text-on-surface-variant mt-1 leading-snug">
+              Every session you log waters it. Come back after a miss and it recovers. Just like you.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-surface-container rounded-bento p-4 mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-3">
+            What a full week looks like
+          </p>
+          <div className="flex gap-1.5">
+            {days.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                <div
+                  className="w-full aspect-square rounded-full"
+                  style={{
+                    background: '#a63c2a',
+                    opacity: i === 0 ? 1 : 0.15,
+                    animation: i > 0 ? `day0wave 1.8s ease-in-out ${i * 0.22}s infinite` : 'none',
+                  }}
+                />
+                <span className="text-[9px] font-bold text-on-surface-variant">{d}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-on-surface-variant mt-3 text-center italic">
+            Each dot is a study day - this is what you're building toward
+          </p>
+        </div>
+
+        <div className="rounded-bento p-4 mb-3 border-2 border-dashed border-outline-variant/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-3">
+            Your patterns - unlocks after a few sessions
+          </p>
+          <div className="flex gap-2">
+            {[
+              { val: '--', label: 'Recovery speed', sub: 'avg days to restart' },
+              { val: '--', label: 'Fragile day', sub: 'toughest weekday' },
+              { val: '--', label: 'Fastest back', sub: 'personal best' },
+            ].map(({ val, label, sub }) => (
+              <div key={label} className="flex-1 bg-surface-container rounded-bento p-2.5 text-center border border-dashed border-outline-variant/30">
+                <p className="text-lg font-black text-outline-variant">{val}</p>
+                <p className="text-[9px] font-bold text-outline-variant uppercase tracking-wide leading-tight mt-0.5">{label}</p>
+                <p className="text-[9px] text-outline-variant/70 mt-0.5 leading-tight">{sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </main>
+
+      <div className="flex-shrink-0 px-4 py-4 bg-m3-bg border-t border-outline-variant/20">
+        <button
+          onClick={onLog}
+          className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform"
+        >
+          Log today's session
+        </button>
+        <p className="text-center text-[11px] text-on-surface-variant mt-2">Takes 5 seconds</p>
+      </div>
+
+      <style>{`
+        @keyframes day0wave {
+          0%, 100% { opacity: 0.15; transform: scale(0.85); }
+          50% { opacity: 0.6; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
+
+export default function DashboardV3() {  const navigate = useNavigate();
   const { activeMilestone, activeLogs, addLog } = useApp();
   const todayStr = today();
   const yesterdayStr = getYesterday();
@@ -445,7 +551,7 @@ const missStreak = getMissStreak(activeLogs, studyDays, todayStr, activeMileston
     ? `You've missed ${missStreak} days in a row.`
     : 'You missed yesterday.';
 
-  if (!activeMilestone) {
+if (!activeMilestone) {
     return (
       <div className="h-screen bg-m3-bg font-jakarta flex flex-col items-center justify-center px-6 text-center">
         <h2 className="text-xl font-black text-[#a63c2a] mb-2">No journey started yet</h2>
@@ -458,6 +564,10 @@ const missStreak = getMissStreak(activeLogs, studyDays, todayStr, activeMileston
         </button>
       </div>
     );
+  }
+
+  if (activeLogs.length === 0) {
+    return <Day0Screen milestone={activeMilestone} onLog={handleLogSession} />;
   }
 
   return (
