@@ -68,10 +68,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, [state]);
 
+// ── Prune logs older than 90 days (runs once on mount) ────────────────────
+  useEffect(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    setState(prev => {
+      const pruned = prev.logs.filter(l => l.date >= cutoffStr);
+      return pruned.length !== prev.logs.length ? { ...prev, logs: pruned } : prev;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Pause expiry check (runs once on mount) ────────────────────────────────
   useEffect(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const yesterday = new Date();
+        const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
