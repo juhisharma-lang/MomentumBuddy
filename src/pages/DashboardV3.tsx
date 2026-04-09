@@ -491,8 +491,8 @@ const missStreak = getMissStreak(activeLogs, studyDays, todayStr, activeMileston
   className="w-28 h-28"
 />          <p className="text-xs font-bold text-on-surface-variant mt-2">
             {plantState === 'growing' && 'Growing steadily'}
-            {plantState === 'wilting' && 'Needs attention — come back today'}
-            {plantState === 'recovered' && 'Coming back — keep going'}
+            {plantState === 'wilting' && 'Needs attention - come back today'}
+            {plantState === 'recovered' && 'Coming back - keep going'}
           </p>
         </div>
 

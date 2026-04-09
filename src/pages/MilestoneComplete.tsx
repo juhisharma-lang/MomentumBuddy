@@ -44,7 +44,7 @@ export default function MilestoneComplete() {
     if (achievement.totalSessions === 0)
       return `"${milestone.goalTitle}" is marked complete.`;
     if (achievement.avgRecovery !== null && achievement.avgRecovery <= 1.5)
-      return `You bounced back fast — ${achievement.avgRecovery} days average recovery.`;
+      return `You bounced back fast - ${achievement.avgRecovery} days average recovery.`;
     if (achievement.longestStreak > 0)
       return `Your longest streak was ${achievement.longestStreak} ${achievement.longestStreak === 1 ? 'day' : 'days'} in a row.`;
     return `"${milestone.goalTitle}" is complete.`;

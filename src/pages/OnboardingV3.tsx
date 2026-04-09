@@ -212,9 +212,9 @@ function Screen2({
     const ms = new Date(deadline).getTime() - today.getTime();
     const weeks = Math.round(ms / (1000 * 60 * 60 * 24 * 7));
     if (weeks < 1) return 'too tight ⚠️';
-    if (weeks < journey.weeksMin) return `${weeks} weeks — tight but doable`;
-    if (weeks <= journey.weeksMax) return `${weeks} weeks — achievable ✓`;
-    return `${weeks} weeks — comfortable pace`;
+    if (weeks < journey.weeksMin) return `${weeks} weeks - tight but doable`;
+    if (weeks <= journey.weeksMax) return `${weeks} weeks - achievable ✓`;
+    return `${weeks} weeks - comfortable pace`;
   }
 
   const effectiveMinutes = useCustom ? parseInt(customMinutes) || 0 : dailyMinutes;
@@ -430,14 +430,22 @@ function Screen3({
       );
     }
   }
-
-  function deriveCheckinTime(): string {
+function deriveCheckinTime(): string {
     const h = parseInt(studyHH);
     const hour24 = studyAMPM === 'PM' && h !== 12 ? h + 12 : studyAMPM === 'AM' && h === 12 ? 0 : h;
-    const checkinHour = (hour24 + 2) % 24;
+    const uncappedHour = hour24 + 2;
+    // Cap at 23:00 (11 PM)
+    const checkinHour = uncappedHour >= 23 ? 23 : uncappedHour % 24;
+    const checkinMin = uncappedHour >= 23 ? 0 : parseInt(studyMM);
     const ampm = checkinHour >= 12 ? 'PM' : 'AM';
     const display = checkinHour > 12 ? checkinHour - 12 : checkinHour === 0 ? 12 : checkinHour;
-    return `${String(display).padStart(2, '0')}:${studyMM} ${ampm}`;
+    return `${String(display).padStart(2, '0')}:${String(checkinMin).padStart(2, '0')} ${ampm}`;
+  }
+
+  function checkinIsCapped(): boolean {
+    const h = parseInt(studyHH);
+    const hour24 = studyAMPM === 'PM' && h !== 12 ? h + 12 : studyAMPM === 'AM' && h === 12 ? 0 : h;
+    return hour24 + 2 >= 23;
   }
 
   function handleFinish() {
@@ -561,7 +569,12 @@ function Screen3({
                   </button>
                 ))}
               </div>
-            </div>
+       </div>
+            {checkinIsCapped() && (
+              <p className="text-xs text-on-surface-variant mt-3">
+                ⚠️ Late study time detected — check-in capped at 11:00 PM so nudges have time to fire.
+              </p>
+            )}
           </section>
 
           {/* How nudges work */}
@@ -588,7 +601,7 @@ function Screen3({
                 <div>
                   <p className="text-sm font-bold text-on-surface">Evening check-in</p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
-                    About 2 hours after your study time, we'll ask: "Did you get your session in?" — one tap to answer.
+                    About 2 hours after your study time, we'll ask: "Did you get your session in?" - one tap to answer.
                   </p>
                 </div>
               </div>
@@ -644,14 +657,13 @@ function Screen3({
                 >
                   Enable Notifications
                 </button>
-{Notification.permission === 'denied' && (
-                  <p className="text-center text-xs text-on-surface-variant mt-2">
-                    Notifications blocked. To enable: click the lock icon in your address bar → Notifications → Allow.
-                  </p>
-                )}
+                <p className="text-center text-[10px] text-on-surface-variant mt-2">
+                  Notifications are being rolled out — we'll activate them in the next update.
+                </p>
               </>
             )}
           </div>
+
         </div>
       </main>
 

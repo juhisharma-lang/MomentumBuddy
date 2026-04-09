@@ -15,7 +15,7 @@ const FLOW_STEPS = [
     iconBorder: '#FF7B6B',
     iconColor: '#FF7B6B',
     title: 'You miss a session',
-    sub: 'Life gets in the way — it happens',
+    sub: 'Life gets in the way - it happens',
   },
   {
     icon: '💬',
@@ -124,7 +124,7 @@ export default function Index() {
           >
             <p className="text-[15px] text-foreground/70 italic leading-relaxed">{QUOTE}</p>
             <p className="text-[11px] text-foreground/40 mt-1.5 tracking-wide">
-              — Early user, preparing for a PM role switch
+              - Early user, preparing for a PM role switch
             </p>
           </div>
 

@@ -70,7 +70,7 @@ export default function Settings() {
                 <PauseCircle className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium mb-0.5">Taking a break?</p>
-                  <p className="text-sm text-foreground/70">Pause check-in reminders. Your goal stays active — resume any time.</p>
+                  <p className="text-sm text-foreground/70">Pause check-in reminders. Your goal stays active - resume any time.</p>
                 </div>
               </div>
 
