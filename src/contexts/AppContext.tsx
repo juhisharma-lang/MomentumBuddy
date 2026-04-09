@@ -130,7 +130,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Milestone actions ──────────────────────────────────────────────────────
 
- const addMilestone = (milestone: Milestone) => {
+const addMilestone = (milestone: Milestone) => {
+  localStorage.removeItem('v3_completed_goals');
+  localStorage.removeItem('lb_goal_edits');
   setState(prev => {
     const abandonedAt = new Date().toISOString().split('T')[0];
     const milestones = prev.milestones.map(m =>
@@ -145,7 +147,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   });
 };
-
   const updateMilestone = (id: string, updates: Partial<Milestone>) => {
     setState(prev => ({
       ...prev,

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { getJourney } from '@/data/journeys';
 import PlantVisual from '@/components/PlantVisual';
-import { CheckCircle2, Circle, X, ArrowRight, Pencil } from 'lucide-react';
+import { CheckCircle2, Circle, X, ArrowRight, Pencil, Settings } from 'lucide-react';
 import { syncScheduleToSW } from '@/lib/notifications';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -692,13 +692,21 @@ if (!activeMilestone) {
       {daysLeft !== null && ` · ${daysLeft} days left`}
     </p>
   </div>
-  <button
-    onClick={() => navigate('/onboarding-v3')}
-    className="text-[11px] text-on-surface-variant border border-outline-variant/40 rounded-full px-3 py-1.5 font-medium active:opacity-70"
-  >
-    Change journey
-  </button>
-</header>
+<div className="flex items-center gap-2">
+    <button
+      onClick={() => navigate('/settings')}
+      className="w-8 h-8 bg-surface-container rounded-full flex items-center justify-center active:scale-95 transition-transform"
+    >
+      <Settings className="w-4 h-4 text-on-surface-variant" />
+    </button>
+    <button
+      onClick={() => navigate('/onboarding-v3')}
+      className="text-[11px] text-on-surface-variant border border-outline-variant/40 rounded-full px-3 py-1.5 font-medium active:opacity-70"
+    >
+      Wrong journey? Switch
+    </button>
+  </div>
+    </header>
 
       <main className="flex-1 overflow-y-auto px-4 pb-4">
 
