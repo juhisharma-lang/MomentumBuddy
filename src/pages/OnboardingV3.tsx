@@ -7,9 +7,28 @@ import {
   BrainCircuit, Cloud, LayoutDashboard, BarChart2, ClipboardList,
   Figma, ShieldCheck, Sparkles, TrendingUp, Code2,
   ArrowRight, ArrowLeft, Bell, Calendar, Clock,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Plus, Trash2, X
 } from 'lucide-react';
 import { requestNotificationPermission, sendLocalNotification, saveStudyTime } from '@/lib/notifications';
+
+// ── Custom journey ────────────────────────────────────────────────────────────
+export interface CustomJourney {
+  id: 'custom';
+  name: string;
+  weeks: { week: number; title: string; goals: string[] }[];
+}
+
+export function saveCustomJourney(journey: CustomJourney) {
+  localStorage.setItem('lb_custom_journey', JSON.stringify(journey));
+}
+
+export function loadCustomJourney(): CustomJourney | null {
+  try {
+    const raw = localStorage.getItem('lb_custom_journey');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 // ── Icon map ──────────────────────────────────────────────────────────────────
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -146,7 +165,7 @@ function Screen1({ onSelect }: { onSelect: (journey: Journey) => void }) {
           </div>
         </div>
 
-        {/* All other journeys — 2 column grid */}
+        {/* All other journeys + Build your own — 2 column grid */}
         <div className="grid grid-cols-2 gap-3">
           {rest.map(journey => (
             <button
@@ -167,12 +186,282 @@ function Screen1({ onSelect }: { onSelect: (journey: Journey) => void }) {
               </div>
             </button>
           ))}
+          {/* Build your own tile */}
+          <button
+            onClick={() => onSelect({ id: 'custom' } as Journey)}
+            className="bg-surface-container border-2 border-dashed border-outline-variant/40 rounded-bento p-4 flex flex-col justify-between text-left active:scale-95 transition-transform min-h-[110px]"
+          >
+            <div className="w-8 h-8 bg-surface-container-lowest rounded-bento flex items-center justify-center mb-2">
+              <Plus className="w-4 h-4 text-on-surface-variant" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-on-surface leading-tight mb-0.5">
+                Build your own
+              </h4>
+              <p className="text-on-surface-variant text-[10px]">
+                Your goal, your pace
+              </p>
+            </div>
+          </button>
         </div>
       </main>
     </div>
   );
 }
 
+// ── Screen 1b: Custom journey builder ────────────────────────────────────────
+
+function Screen1b({
+  onNext,
+  onBack,
+}: {
+  onNext: (journey: Journey) => void;
+  onBack: () => void;
+}) {
+  const [goalName, setGoalName] = useState('');
+  const [weekCount, setWeekCount] = useState(8);
+  const [step, setStep] = useState<'setup' | 'name-weeks'>('setup');
+  const [weekTitles, setWeekTitles] = useState<string[]>([]);
+  const [weekGoals, setWeekGoals] = useState<string[][]>([]);
+  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
+  const [newGoalText, setNewGoalText] = useState('');
+
+  function handleSetup() {
+    if (!goalName.trim() || weekCount < 1) return;
+    setWeekTitles(Array.from({ length: weekCount }, (_, i) => `Week ${i + 1}`));
+    setWeekGoals(Array.from({ length: weekCount }, () => []));
+    setStep('name-weeks');
+  }
+
+  function handleAddGoal(weekIndex: number) {
+    if (!newGoalText.trim()) return;
+    setWeekGoals(prev => {
+      const next = [...prev];
+      next[weekIndex] = [...(next[weekIndex] ?? []), newGoalText.trim()];
+      return next;
+    });
+    setNewGoalText('');
+  }
+
+  function handleRemoveGoal(weekIndex: number, goalIndex: number) {
+    setWeekGoals(prev => {
+      const next = [...prev];
+      next[weekIndex] = next[weekIndex].filter((_, i) => i !== goalIndex);
+      return next;
+    });
+  }
+
+  function handleFinish() {
+    const customJourney: CustomJourney = {
+      id: 'custom',
+      name: goalName.trim(),
+      weeks: weekTitles.map((title, i) => ({
+        week: i + 1,
+        title,
+        goals: weekGoals[i] ?? [],
+      })),
+    };
+    saveCustomJourney(customJourney);
+    const journeyCompat: Journey = {
+      id: 'custom',
+      name: goalName.trim(),
+      category: 'Custom',
+      icon: 'Sparkles',
+      weeksMin: weekCount,
+      weeksMax: weekCount,
+      available: true,
+      tileColor: 'bg-surface-container',
+      weeks: weekTitles.map((title, i) => ({
+        week: i + 1,
+        title,
+        goals: weekGoals[i] ?? [],
+      })),
+    };
+    onNext(journeyCompat);
+  }
+
+  return (
+    <div className="h-screen bg-m3-bg font-jakarta flex flex-col overflow-hidden">
+      <BentoHeader
+        step={1}
+        total={3}
+        onBack={step === 'name-weeks' ? () => setStep('setup') : onBack}
+      />
+
+      <main className="flex-1 overflow-y-auto px-4 pb-4">
+        {step === 'setup' ? (
+          <>
+            <div className="mb-5 pt-2">
+              <h2 className="text-2xl font-black tracking-tight text-on-surface leading-tight">
+                Build your own <span className="text-[#a63c2a] italic">journey.</span>
+              </h2>
+              <p className="text-sm text-on-surface-variant mt-1">
+                Name your goal and decide how many weeks you need.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <section className="bg-surface-container rounded-bento p-5">
+                <h3 className="text-sm font-bold text-on-surface mb-3">What are you learning?</h3>
+                <input
+                  type="text"
+                  value={goalName}
+                  onChange={e => setGoalName(e.target.value)}
+                  placeholder="e.g. Spanish B1, UPSC Prelims, React Native"
+                  className="w-full bg-surface-container-lowest rounded-bento px-3 py-3 text-sm font-bold border border-outline-variant/20 focus:outline-none text-on-surface placeholder:font-normal placeholder:text-on-surface-variant"
+                />
+              </section>
+
+              <section className="bg-surface-container rounded-bento p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-on-surface">How many weeks?</h3>
+                  <span className="text-sm font-black text-[#a63c2a]">{weekCount} weeks</span>
+                </div>
+                <input
+                  type="range"
+                  min={1} max={52} step={1}
+                  value={weekCount}
+                  onChange={e => setWeekCount(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer accent-[#a63c2a] mb-3"
+                />
+                <div className="flex justify-between text-[10px] text-on-surface-variant font-bold">
+                  <span>1 wk</span>
+                  <span>26 wks</span>
+                  <span>52 wks</span>
+                </div>
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  {[4, 8, 12, 16, 24].map(w => (
+                    <button
+                      key={w}
+                      onClick={() => setWeekCount(w)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        weekCount === w
+                          ? 'bg-[#a63c2a] text-[#fff7f6]'
+                          : 'bg-surface-container-lowest text-on-surface-variant'
+                      }`}
+                    >
+                      {w}w
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-4 pt-2">
+              <h2 className="text-2xl font-black tracking-tight text-on-surface leading-tight">
+                Plan your <span className="text-[#a63c2a] italic">weeks.</span>
+              </h2>
+              <p className="text-sm text-on-surface-variant mt-1">
+                Name each week and add goals. You can edit these from the dashboard too.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {weekTitles.map((title, i) => (
+                <div key={i} className="bg-surface-container rounded-bento overflow-hidden">
+                  {/* Week row */}
+                  <div
+                    className="px-4 py-3 flex items-center gap-3 cursor-pointer active:opacity-70"
+                    onClick={() => setExpandedWeek(expandedWeek === i ? null : i)}
+                  >
+                    <span className="text-[10px] font-bold text-on-surface-variant w-5 flex-shrink-0">
+                      {i + 1}
+                    </span>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={e => {
+                        const next = [...weekTitles];
+                        next[i] = e.target.value;
+                        setWeekTitles(next);
+                      }}
+                      onClick={e => e.stopPropagation()}
+                      className="flex-1 bg-transparent text-sm font-bold text-on-surface focus:outline-none"
+                    />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {(weekGoals[i]?.length ?? 0) > 0 && (
+                        <span className="text-[10px] font-bold text-on-surface-variant bg-surface-container-lowest px-2 py-0.5 rounded-full">
+                          {weekGoals[i].length}
+                        </span>
+                      )}
+                      <span className="text-on-surface-variant text-xs">
+                        {expandedWeek === i ? '▲' : '▼'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expanded goals area */}
+                  {expandedWeek === i && (
+                    <div className="px-4 pb-4 border-t border-outline-variant/20">
+                      {/* Existing goals */}
+                      {(weekGoals[i]?.length ?? 0) > 0 && (
+                        <div className="flex flex-col gap-1 mt-3 mb-3">
+                          {weekGoals[i].map((goal, gi) => (
+                            <div key={gi} className="flex items-start gap-2 bg-surface-container-lowest rounded-bento px-3 py-2">
+                              <span className="text-xs text-on-surface flex-1 leading-snug">{goal}</span>
+                              <button
+                                onClick={() => handleRemoveGoal(i, gi)}
+                                className="text-on-surface-variant flex-shrink-0 mt-0.5 active:opacity-60"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add goal input */}
+                      <div className="flex gap-2 mt-3">
+                        <input
+                          type="text"
+                          value={newGoalText}
+                          onChange={e => setNewGoalText(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleAddGoal(i)}
+                          placeholder="Add a goal for this week"
+                          className="flex-1 bg-surface-container-lowest rounded-bento px-3 py-2 text-xs border border-outline-variant/20 focus:outline-none text-on-surface placeholder:text-on-surface-variant"
+                        />
+                        <button
+                          onClick={() => handleAddGoal(i)}
+                          disabled={!newGoalText.trim()}
+                          className="bg-[#a63c2a] text-[#fff7f6] rounded-bento px-3 py-2 text-xs font-bold disabled:opacity-40 active:scale-95 transition-transform"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </main>
+
+      <div className="flex-shrink-0 px-4 py-4 bg-m3-bg border-t border-outline-variant/20">
+        {step === 'setup' ? (
+          <button
+            onClick={handleSetup}
+            disabled={!goalName.trim() || weekCount < 1}
+            className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            Plan my weeks
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        ) : (
+          <button
+            onClick={handleFinish}
+            className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+          >
+            Looks good
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 // ── Screen 2: Set Your Plan ───────────────────────────────────────────────────
 
 function Screen2({
@@ -191,7 +480,7 @@ function Screen2({
 }) {
   const today = new Date();
   const defaultDeadline = new Date(today);
-  defaultDeadline.setDate(today.getDate() + journey.weeksMin * 7);
+  defaultDeadline.setDate(today.getDate() + (journey.weeksMin ?? 8) * 7);
   const defaultDeadlineStr = defaultDeadline.toISOString().split('T')[0];
 
   const [deadline, setDeadline] = useState(defaultDeadlineStr);
@@ -212,15 +501,15 @@ function Screen2({
     const ms = new Date(deadline).getTime() - today.getTime();
     const weeks = Math.round(ms / (1000 * 60 * 60 * 24 * 7));
     if (weeks < 1) return 'too tight ⚠️';
-    if (weeks < journey.weeksMin) return `${weeks} weeks - tight but doable`;
-    if (weeks <= journey.weeksMax) return `${weeks} weeks - achievable ✓`;
+    if (weeks < (journey.weeksMin ?? 4)) return `${weeks} weeks - tight but doable`;
+    if (weeks <= (journey.weeksMax ?? 52)) return `${weeks} weeks - achievable ✓`;
     return `${weeks} weeks - comfortable pace`;
   }
 
   const effectiveMinutes = useCustom ? parseInt(customMinutes) || 0 : dailyMinutes;
 
   function formatMinutes(m: number): string {
-    if (m <= 0) return '—';
+    if (m <= 0) return '-';
     if (m < 60) return `${m} min`;
     const h = Math.floor(m / 60);
     const rem = m % 60;
@@ -365,8 +654,6 @@ function Screen2({
             </p>
           </section>
 
-          {/* DISABLED — Phase 2: course outline field */}
-
         </div>
       </main>
 
@@ -422,19 +709,18 @@ function Screen3({
         `${studyHH}:${studyMM} ${studyAMPM}`,
         deriveCheckinTime()
       );
-      // Fire a welcome notification immediately so they see it works
       await sendLocalNotification(
-        'Learners Buddy 🌱',
+        'Learners Buddy',
         'Notifications enabled. We\'ll remind you before your study time.',
         '/dashboard-v3'
       );
     }
   }
-function deriveCheckinTime(): string {
+
+  function deriveCheckinTime(): string {
     const h = parseInt(studyHH);
     const hour24 = studyAMPM === 'PM' && h !== 12 ? h + 12 : studyAMPM === 'AM' && h === 12 ? 0 : h;
     const uncappedHour = hour24 + 2;
-    // Cap at 23:00 (11 PM)
     const checkinHour = uncappedHour >= 23 ? 23 : uncappedHour % 24;
     const checkinMin = uncappedHour >= 23 ? 0 : parseInt(studyMM);
     const ampm = checkinHour >= 12 ? 'PM' : 'AM';
@@ -569,20 +855,20 @@ function deriveCheckinTime(): string {
                   </button>
                 ))}
               </div>
-       </div>
+            </div>
             {checkinIsCapped() && (
               <p className="text-xs text-on-surface-variant mt-3">
-                ⚠️ Late study time detected — check-in capped at 11:00 PM so nudges have time to fire.
+                Late study time detected - check-in capped at 11:00 PM so nudges have time to fire.
               </p>
             )}
           </section>
 
-          {/* How nudges work */}
+          {/* What this means */}
           <section className="bg-surface-container-lowest rounded-bento p-5 border border-outline-variant/15">
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">
               What this means
             </p>
-           <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
               <div className="flex items-start gap-3">
                 <div className="w-7 h-7 bg-secondary-container rounded-full flex items-center justify-center shrink-0 mt-0.5">
                   <Bell className="w-3.5 h-3.5 text-on-secondary-container" />
@@ -607,7 +893,7 @@ function deriveCheckinTime(): string {
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-7 h-7 bg-surface-container rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-xs">ℹ️</span>
+                  <span className="text-xs">i</span>
                 </div>
                 <div>
                   <p className="text-sm font-bold text-on-surface">How nudges work right now</p>
@@ -626,7 +912,7 @@ function deriveCheckinTime(): string {
               <div>
                 <p className="font-bold text-on-secondary-container text-sm">Add to Home Screen first</p>
                 <p className="text-on-secondary-container/80 text-xs mt-1">
-                  Tap Share in Safari → "Add to Home Screen" to enable notifications on iPhone.
+                  Tap Share in Safari - "Add to Home Screen" to enable notifications on iPhone.
                 </p>
               </div>
             </div>
@@ -657,9 +943,11 @@ function deriveCheckinTime(): string {
                 >
                   Enable Notifications
                 </button>
-                <p className="text-center text-[10px] text-on-surface-variant mt-2">
-                  Notifications are being rolled out — we'll activate them in the next update.
-                </p>
+                {Notification.permission === 'denied' && (
+                  <p className="text-center text-xs text-on-surface-variant mt-2">
+                    Notifications blocked. To enable: click the lock icon in your address bar - Notifications - Allow.
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -686,7 +974,7 @@ export default function OnboardingV3() {
   const navigate = useNavigate();
   const { addMilestone, completeOnboarding } = useApp();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | '1b' | 2 | 3>(1);
   const [selectedJourney, setSelectedJourney] = useState<Journey | null>(null);
   const [planData, setPlanData] = useState<{
     deadline: string;
@@ -696,6 +984,10 @@ export default function OnboardingV3() {
   } | null>(null);
 
   function handleJourneySelect(journey: Journey) {
+    if (journey.id === 'custom') {
+      setStep('1b');
+      return;
+    }
     setSelectedJourney(journey);
     setStep(2);
   }
@@ -743,7 +1035,8 @@ export default function OnboardingV3() {
   }
 
   if (step === 1) return <Screen1 onSelect={handleJourneySelect} />;
-  if (step === 2 && selectedJourney) return <Screen2 journey={selectedJourney} onNext={handlePlanNext} onBack={() => setStep(1)} />;
+  if (step === '1b') return <Screen1b onNext={(j) => { setSelectedJourney(j); setStep(2); }} onBack={() => setStep(1)} />;
+  if (step === 2 && selectedJourney) return <Screen2 journey={selectedJourney} onNext={handlePlanNext} onBack={() => setStep(selectedJourney.id === 'custom' ? '1b' : 1)} />;
   if (step === 3 && selectedJourney) return <Screen3 journey={selectedJourney} onFinish={handleFinish} onBack={() => setStep(2)} />;
   return null;
 }

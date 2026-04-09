@@ -621,10 +621,17 @@ const [completedGoals, setCompletedGoals] = useState<Set<string>>(() => {
     });
   }
 
-  const journey = activeMilestone?.journeyId
-    ? getJourney(activeMilestone.journeyId)
-    : null;
-
+const journey = useMemo(() => {
+    if (!activeMilestone?.journeyId) return null;
+    if (activeMilestone.journeyId === 'custom') {
+      try {
+        const raw = localStorage.getItem('lb_custom_journey');
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    }
+    return getJourney(activeMilestone.journeyId);
+  }, [activeMilestone?.journeyId]);
+  
   const weekNumber = getCurrentWeekNumber(activeMilestone?.activatedAt);
   const daysLeft = getDaysLeft(activeMilestone?.deadline);
   const plantState = getPlantState(activeLogs, todayStr);
