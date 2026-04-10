@@ -10,7 +10,6 @@ import {
   ChevronDown, ChevronUp, Plus, Trash2, X
 } from 'lucide-react';
 import { requestNotificationPermission, sendLocalNotification, saveStudyTime } from '@/lib/notifications';
-
 // ── Custom journey ────────────────────────────────────────────────────────────
 export interface CustomJourney {
   id: 'custom';
@@ -717,6 +716,7 @@ function Screen3({
         'Notifications enabled. We\'ll remind you before your study time.',
         '/dashboard-v3'
       );
+      subscribeToWebPush();
     }
   }
 
