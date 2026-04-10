@@ -59,11 +59,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // Persist on every state change
+  // ── Persist + sync main state on every change ──────────────────────────────
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     import('@/lib/sync').then(({ syncToSupabase }) => {
       syncToSupabase(state);
+    });
+  }, [state]);
+
+  // ── Sync secondary localStorage keys to Supabase ──────────────────────────
+  useEffect(() => {
+    const reminderTime = localStorage.getItem('lb_reminder_time') ?? undefined;
+    const checkinTime  = localStorage.getItem('lb_checkin_time') ?? undefined;
+    const customJourney = (() => {
+      try { return JSON.parse(localStorage.getItem('lb_custom_journey') ?? 'null'); } catch { return null; }
+    })();
+    const goalEdits = (() => {
+      try { return JSON.parse(localStorage.getItem('lb_goal_edits') ?? 'null'); } catch { return null; }
+    })();
+    const lapseFeedback = localStorage.getItem('lb_lapse_feedback') ?? undefined;
+
+    import('@/lib/sync').then(({ syncSettingsToSupabase }) => {
+      syncSettingsToSupabase({ reminderTime, checkinTime, customJourney, goalEdits, lapseFeedback });
     });
   }, [state]);
 
@@ -98,7 +115,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const resumeDateStr = resumeDate.toISOString().split('T')[0];
         if (resumeDateStr > yesterdayStr) continue;
 
-        // Backfill all missed days from resume date up to yesterday
         const cursor = new Date(resumeDateStr);
         const yesterdayCursor = new Date(yesterdayStr);
         while (cursor <= yesterdayCursor) {
