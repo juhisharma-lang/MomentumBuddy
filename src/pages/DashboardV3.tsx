@@ -566,7 +566,7 @@ function Day0Screen({ milestone, onLog }: {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function DashboardV3() {  const navigate = useNavigate();
-  const { activeMilestone, activeLogs, addLog } = useApp();
+  const { activeMilestone, activeLogs, activePauses, addLog } = useApp();
   const todayStr = today();
   const yesterdayStr = getYesterday();
   const weekDays = getWeekDays();
@@ -574,9 +574,10 @@ export default function DashboardV3() {  const navigate = useNavigate();
   const studyDays = activeMilestone?.studyDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 const missStreak = getMissStreak(activeLogs, studyDays, todayStr, activeMilestone?.activatedAt);
-  const todayLogged = activeLogs.find(l => l.date === todayStr);
-  const missedYesterday = activeLogs.find(l => l.date === yesterdayStr && !l.completed);
-  const showMissBanner = missStreak > 0 && !todayLogged?.completed;
+const todayLogged = activeLogs.find(l => l.date === todayStr);
+const missedYesterday = activeLogs.find(l => l.date === yesterdayStr && !l.completed);
+const showMissBanner = missStreak > 0 && !todayLogged?.completed;
+const activePause = activePauses.find(p => p.pausedFrom <= todayStr && p.pausedUntil >= todayStr);
 
 const [completedGoals, setCompletedGoals] = useState<Set<string>>(() => {
     try {
@@ -763,6 +764,23 @@ const isDay0 = activeLogs.length === 0 && activeMilestone.activatedAt === todayS
             sub={streak > 0 ? `scheduled sessions in a row` : 'Start today'}
           />
         </div>
+
+{activePause && (
+<div className="w-full bg-secondary-container border border-outline-variant/20 rounded-bento p-4 mb-4">
+<div className="flex items-center justify-between">
+<div>
+<p className="text-sm font-bold text-on-secondary-container mb-0.5">
+             You're on a break
+           </p>
+           <p className="text-xs text-on-surface-variant">
+             Check-ins paused until {activePause.pausedUntil}. See you then.
+           </p>
+         </div>
+         <span className="text-xl">☕</span>
+       </div>
+     </div>
+   )}
+
 
         {showMissBanner && (
           <button

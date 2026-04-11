@@ -77,7 +77,7 @@ async function doSync(state: SyncState) {
       .update({
         onboarded: state.onboarded,
         active_milestone_id: state.activeMilestoneId ?? null,
-        full_state: state, // keep blob as safety net
+        full_state: state,
       })
       .eq('id', userId)
 
@@ -110,27 +110,30 @@ async function doSync(state: SyncState) {
     }
 
     // Daily logs (check_ins)
+    // FIX: minutes_logged now reads actual daily commitment from the milestone
     if (state.logs.length > 0) {
       await supabase
         .from('check_ins')
         .upsert(
-          state.logs.map((l: any) => ({
-            user_id: userId,
-            milestone_id: l.milestoneId,
-            date: l.date,
-            completed: l.completed,
-            minutes_logged: 0,
-            fallback_triggered: l.fallbackTriggered ?? false,
-            checkin_response_at: l.checkinResponseAt ?? null,
-          })),
+          state.logs.map((l: any) => {
+            const milestone = state.milestones.find((m: any) => m.id === l.milestoneId)
+            const minutesLogged = l.completed ? (milestone?.dailyMinutes ?? 0) : 0
+            return {
+              user_id: userId,
+              milestone_id: l.milestoneId,
+              date: l.date,
+              completed: l.completed,
+              minutes_logged: minutesLogged,
+              fallback_triggered: l.fallbackTriggered ?? false,
+              checkin_response_at: l.checkinResponseAt ?? null,
+            }
+          }),
           { onConflict: 'user_id,date' }
         )
     }
 
     // Pauses
     if (state.pauses.length > 0) {
-      // Delete existing pauses for this user and re-insert
-      // (pauses don't have stable IDs in the current model)
       await supabase
         .from('pauses')
         .delete()
@@ -205,7 +208,6 @@ async function doSync(state: SyncState) {
     }
 
   } catch (err) {
-    // Never block the app — Supabase is a mirror, not the source of truth
     console.warn('Supabase sync failed silently:', err)
   }
 }

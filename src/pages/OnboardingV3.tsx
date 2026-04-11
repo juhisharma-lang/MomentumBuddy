@@ -9,7 +9,7 @@ import {
   ArrowRight, ArrowLeft, Bell, Calendar, Clock,
   ChevronDown, ChevronUp, Plus, Trash2, X
 } from 'lucide-react';
-import { requestNotificationPermission, sendLocalNotification, saveStudyTime } from '@/lib/notifications';
+import { requestNotificationPermission, sendLocalNotification, saveStudyTime, subscribeToWebPush } from '@/lib/notifications';
 // ── Custom journey ────────────────────────────────────────────────────────────
 export interface CustomJourney {
   id: 'custom';
@@ -525,6 +525,9 @@ function Screen2({
   ];
   const quote = quotes[journey.id.length % quotes.length];
 
+  // FIX: disable confirm button if no study days selected
+  const canProceed = effectiveMinutes > 0 && studyDays.length > 0;
+
   return (
     <div className="h-screen bg-m3-bg font-jakarta flex flex-col overflow-hidden">
       <BentoHeader step={2} total={3} onBack={onBack} />
@@ -643,8 +646,9 @@ function Screen2({
                 />
               ))}
             </div>
-            <p className="text-[10px] text-on-surface-variant mt-2">
-              {studyDays.length} days selected
+            {/* FIX: warn when no days selected */}
+            <p className={`text-[10px] mt-2 font-bold ${studyDays.length === 0 ? 'text-red-500' : 'text-on-surface-variant'}`}>
+              {studyDays.length === 0 ? 'Select at least one study day' : `${studyDays.length} days selected`}
             </p>
           </section>
 
@@ -662,7 +666,7 @@ function Screen2({
       <div className="flex-shrink-0 px-4 py-4 bg-m3-bg border-t border-outline-variant/20">
         <button
           onClick={() => onNext({ deadline, dailyMinutes: effectiveMinutes, studyDays, notebookOutline: '' })}
-          disabled={effectiveMinutes <= 0}
+          disabled={!canProceed}
           className="bg-[#a63c2a] text-[#fff7f6] rounded-full w-full py-4 font-bold text-base shadow-lg shadow-[#a63c2a]/20 active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
         >
           Confirm My Plan
@@ -703,6 +707,7 @@ function Screen3({
     ('standalone' in window.navigator) &&
     (window.navigator as { standalone?: boolean }).standalone;
 
+  // FIX: await subscribeToWebPush so it completes before user navigates away
   async function handleEnableNotifications() {
     const granted = await requestNotificationPermission();
     setPermissionGranted(granted);
@@ -716,7 +721,7 @@ function Screen3({
         'Notifications enabled. We\'ll remind you before your study time.',
         '/dashboard-v3'
       );
-      subscribeToWebPush();
+      await subscribeToWebPush();
     }
   }
 
@@ -901,7 +906,7 @@ function Screen3({
                 <div>
                   <p className="text-sm font-bold text-on-surface">How nudges work right now</p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
-                    Nudges fire while the app is open in your browser. Background notifications are coming in the next update.
+                    Nudges now fire even when the app is closed - directly to your device.
                   </p>
                 </div>
               </div>
@@ -1038,6 +1043,7 @@ export default function OnboardingV3() {
   }
 
   if (step === 1) return <Screen1 onSelect={handleJourneySelect} />;
+
   if (step === '1b') return <Screen1b onNext={(j) => { setSelectedJourney(j); setStep(2); }} onBack={() => setStep(1)} />;
   if (step === 2 && selectedJourney) return <Screen2 journey={selectedJourney} onNext={handlePlanNext} onBack={() => setStep(selectedJourney.id === 'custom' ? '1b' : 1)} />;
   if (step === 3 && selectedJourney) return <Screen3 journey={selectedJourney} onFinish={handleFinish} onBack={() => setStep(2)} />;
