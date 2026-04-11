@@ -128,7 +128,7 @@ async function doSync(state: SyncState) {
               checkin_response_at: l.checkinResponseAt ?? null,
             }
           }),
-          { onConflict: 'user_id,date' }
+          { onConflict: 'user_id,milestone_id,date' }
         )
     }
 
